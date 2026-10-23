@@ -20,6 +20,8 @@ export interface OpeningFamily {
   firstMove: WhiteFirstMove;
   ecoCodes: EcoCode[];
   count: number;
+  /** Every book position (EPD key into EcoBook.byEpd) in this family, in source order. */
+  epds: string[];
 }
 
 export interface EcoBook {

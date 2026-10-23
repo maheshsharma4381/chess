@@ -1,5 +1,5 @@
-import type { EcoBook, OpeningFamily } from '@chess/types';
-import { classifyFamily, familyOf } from './classifyFamily';
+import type { EcoBook, OpeningFamily, WhiteFirstMove } from '@chess/types';
+import { classifyFamily, familyOf, toWhiteFirstMove } from './classifyFamily';
 import type { RawOpening } from './parseTsv';
 import { replayPgn } from './replayPgn';
 
@@ -18,8 +18,26 @@ export interface CompileResult {
 
 interface FamilyAccumulator {
   ecoCodes: Set<string>;
-  count: number;
+  epds: string[];
+  firstMoves: Map<WhiteFirstMove, number>;
   shortestLine: string[];
+}
+
+/**
+ * The family's usual first move. The shortest line can be a transposition
+ * (Pterodactyl Defense's shortest line starts 1.d4 though most lines start 1.e4).
+ */
+function majorityFirstMove(acc: FamilyAccumulator): WhiteFirstMove {
+  const tieBreak = toWhiteFirstMove(acc.shortestLine[0]);
+  let best = tieBreak;
+  let bestCount = acc.firstMoves.get(tieBreak) ?? 0;
+  for (const [move, n] of acc.firstMoves) {
+    if (n > bestCount) {
+      best = move;
+      bestCount = n;
+    }
+  }
+  return best;
 }
 
 export function compileBook(rows: RawOpening[], options: CompileOptions): CompileResult {
@@ -46,26 +64,26 @@ export function compileBook(rows: RawOpening[], options: CompileOptions): Compil
     (byEco[row.eco] ??= []).push(line.epd);
 
     const familyName = familyOf(row.name);
-    const family = families.get(familyName);
+    let family = families.get(familyName);
     if (!family) {
-      families.set(familyName, {
-        ecoCodes: new Set([row.eco]),
-        count: 1,
-        shortestLine: line.sans,
-      });
-    } else {
-      family.ecoCodes.add(row.eco);
-      family.count++;
-      if (line.sans.length < family.shortestLine.length) family.shortestLine = line.sans;
+      family = { ecoCodes: new Set(), epds: [], firstMoves: new Map(), shortestLine: line.sans };
+      families.set(familyName, family);
     }
+    family.ecoCodes.add(row.eco);
+    family.epds.push(line.epd);
+    const first = toWhiteFirstMove(line.sans[0]);
+    family.firstMoves.set(first, (family.firstMoves.get(first) ?? 0) + 1);
+    if (line.sans.length < family.shortestLine.length) family.shortestLine = line.sans;
   }
 
   const familyList: OpeningFamily[] = [...families]
     .map(([name, acc]) => ({
       name,
-      ...classifyFamily(name, acc.shortestLine),
+      side: classifyFamily(name, acc.shortestLine).side,
+      firstMove: majorityFirstMove(acc),
       ecoCodes: [...acc.ecoCodes].sort(),
-      count: acc.count,
+      count: acc.epds.length,
+      epds: acc.epds,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 

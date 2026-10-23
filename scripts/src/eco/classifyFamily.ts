@@ -33,6 +33,9 @@ export function classifyFamily(
   else if (WHITE_NAME.test(family)) side = 'white';
   else side = shortestLine.length % 2 === 1 ? 'white' : 'black';
 
-  const firstMove = FIRST_MOVES[shortestLine[0] ?? ''] ?? 'Flank';
-  return { side, firstMove };
+  return { side, firstMove: toWhiteFirstMove(shortestLine[0]) };
+}
+
+export function toWhiteFirstMove(san: string | undefined): WhiteFirstMove {
+  return FIRST_MOVES[san ?? ''] ?? 'Flank';
 }

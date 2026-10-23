@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { Chess } from 'chess.js';
 import { describe, expect, it } from 'vitest';
 import type { EcoBook } from '@chess/types';
-import { normalizeEpd } from '../src/index';
+import { loadEcoBook, normalizeEpd } from '../src/index';
 
 const book = JSON.parse(
   readFileSync(resolve(import.meta.dirname, '../src/data/eco-book.json'), 'utf8'),
@@ -57,6 +57,22 @@ describe('generated eco-book.json', () => {
     expect(family('Ruy Lopez')).toMatchObject({ side: 'white', firstMove: '1.e4' });
     expect(family('Four Knights Game')).toMatchObject({ side: 'white', firstMove: '1.e4' });
     expect(family('Vienna Gambit')).toMatchObject({ side: 'white', firstMove: '1.e4' });
+  });
+
+  it('tags a family with its most common first move, not a transposed shortest line', () => {
+    const pterodactyl = book.families.find((f) => f.name === 'Pterodactyl Defense');
+    expect(pterodactyl?.firstMove).toBe('1.e4');
+  });
+
+  it('lists every position of a family', () => {
+    const najdorf = epdAfter(['e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'Nf6', 'Nc3', 'a6']);
+    const sicilian = book.families.find((f) => f.name === 'Sicilian Defense');
+    expect(sicilian?.epds).toContain(najdorf);
+    expect(sicilian?.epds).toHaveLength(sicilian?.count ?? -1);
+  });
+
+  it('is exposed through loadEcoBook()', () => {
+    expect(loadEcoBook().count).toBe(book.count);
   });
 
   it('never splits a family on a comma sub-line', () => {

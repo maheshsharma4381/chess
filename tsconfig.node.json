@@ -1,0 +1,8 @@
+{
+  "//": "Node-side code: scripts, server, tests.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "allowArbitraryExtensions": true
+  }
+}

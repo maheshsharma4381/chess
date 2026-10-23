@@ -44,15 +44,45 @@ describe('compileBook', () => {
   it('aggregates opening families with side, first move and ECO codes', () => {
     const { book } = compile();
     expect(book.families).toEqual([
-      { name: "King's Pawn Game", side: 'white', firstMove: '1.e4', ecoCodes: ['C20'], count: 1 },
+      {
+        name: "King's Pawn Game",
+        side: 'white',
+        firstMove: '1.e4',
+        ecoCodes: ['C20'],
+        count: 1,
+        epds: [replayPgn('1. e4').epd],
+      },
       {
         name: 'Sicilian Defense',
         side: 'black',
         firstMove: '1.e4',
         ecoCodes: ['B20', 'B27'],
         count: 2,
+        epds: [replayPgn('1. e4 c5').epd, replayPgn('1. e4 c5 2. Nf3 g6').epd],
       },
     ]);
+  });
+
+  const familyFirstMove = (family: RawOpening[]) =>
+    compileBook(family, { source: 'lichess', generatedAt: 'x' }).book.families[0]?.firstMove;
+
+  it("uses the family's most common first move, not a transposed shortest line", () => {
+    expect(
+      familyFirstMove([
+        { eco: 'B06', name: 'Test Defense', pgn: '1. d4 g6' },
+        { eco: 'B06', name: 'Test Defense: A', pgn: '1. e4 g6 2. Nf3' },
+        { eco: 'B06', name: 'Test Defense: B', pgn: '1. e4 g6 2. d4' },
+      ]),
+    ).toBe('1.e4');
+  });
+
+  it('breaks a first-move tie with the shortest line', () => {
+    expect(
+      familyFirstMove([
+        { eco: 'B06', name: 'Test Defense', pgn: '1. d4 g6' },
+        { eco: 'B06', name: 'Test Defense: A', pgn: '1. e4 g6 2. Nf3' },
+      ]),
+    ).toBe('1.d4');
   });
 
   it('records metadata', () => {

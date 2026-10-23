@@ -2,3 +2,4 @@
 *.png binary
 *.jpg binary
 *.wasm binary
+packages/chess-core/src/data/eco-book.json -diff linguist-generated

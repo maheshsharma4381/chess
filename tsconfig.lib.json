@@ -1,0 +1,8 @@
+{
+  "//": "Shared library source: runs in Node, browsers and React Native, so no Node types.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": [],
+    "allowArbitraryExtensions": true
+  }
+}
