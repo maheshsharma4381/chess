@@ -82,6 +82,7 @@ fetchSources(fetchFn?: typeof fetch): Promise<RawOpening[]>   // throws unless a
 ### Task 2: `@chess/types` foundation
 
 Tests (`classification.test.ts`):
+
 - `CLASSIFICATION_META` has exactly 10 keys, matching the `MoveClassification` union.
 - Colors match the spec exactly (brilliant `#1baca6` … blunder `#ca3431`).
 - Symbols: `!!`, `!`, `★`, `👍`, `✓`, `📖`, `?!`, `?`, `✖`, `??`.
@@ -92,6 +93,7 @@ Tests (`classification.test.ts`):
 ### Task 3: `normalizeEpd` in `@chess/chess-core`
 
 Tests (`epd.test.ts`):
+
 - Start FEN → `rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -`.
 - After `1.e4`, FEN with `e3` → ep field `-` (no black pawn can capture).
 - Position with a legal ep capture (`1.e4 Nf6 2.e5 d5`) → ep field `d6` kept.
@@ -104,6 +106,7 @@ Tests (`epd.test.ts`):
 ### Task 4: Parse, replay, classify, compile (scripts)
 
 Tests:
+
 - `parseTsv`: header skipped, CRLF handled, blank lines skipped, rows with <3 columns skipped.
 - `replayPgn('1. e4 c5')` → `uci: 'e2e4 c7c5'`, `plies: 2`, epd equals `normalizeEpd` of the position. Castling `O-O` → `e1g1`. Promotion → `e7e8q` style. Illegal SAN → throws.
 - `classifyFamily`: `'Sicilian Defense: Najdorf Variation'` + `e4` → `{family:'Sicilian Defense', side:'black', firstMove:'1.e4'}`. `'Queen's Gambit Declined'` → black. `'Ruy Lopez'` → white. `'Bird Opening'` (`f4`) → firstMove `Flank`. `'English Opening'` (`c4`) → `1.c4`.
@@ -114,6 +117,7 @@ Tests:
 ### Task 5: Fetch with fallback, seed, generate the real book
 
 Tests (`fetchSources.test.ts`, with a mocked fetch):
+
 - All 5 succeed → rows concatenated in a–e order.
 - One file returns 500 → rejects (no partial book).
 - `resolveRows` (the fallback decision): on fetch failure with an existing lichess book → `{action:'keep'}`. With no book or a seed book → `{action:'write', source:'seed'}`.

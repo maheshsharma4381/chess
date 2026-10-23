@@ -11,7 +11,8 @@ const rows: RawOpening[] = [
   { eco: 'A00', name: 'Broken Line', pgn: '1. e4 e4' },
 ];
 
-const compile = () => compileBook(rows, { source: 'lichess', generatedAt: '2026-10-23T00:00:00.000Z' });
+const compile = () =>
+  compileBook(rows, { source: 'lichess', generatedAt: '2026-10-23T00:00:00.000Z' });
 
 describe('compileBook', () => {
   it('indexes each position by its normalized EPD', () => {

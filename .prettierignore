@@ -1,5 +1,6 @@
 pnpm-lock.yaml
 packages/chess-core/src/data/eco-book.json
+scripts/src/eco/seed.ts
 docs/spec/
 coverage/
 .turbo/
