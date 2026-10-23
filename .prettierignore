@@ -1,0 +1,6 @@
+pnpm-lock.yaml
+packages/chess-core/src/data/eco-book.json
+docs/spec/
+coverage/
+.turbo/
+.superpowers/

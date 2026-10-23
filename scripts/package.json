@@ -1,0 +1,25 @@
+{
+  "name": "@chess/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fetch-eco": "tsx fetch-eco-book.ts",
+    "build-eco-seed": "tsx build-eco-seed.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@chess/chess-core": "workspace:*",
+    "@chess/types": "workspace:*",
+    "chess.js": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
