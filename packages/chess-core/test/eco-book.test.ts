@@ -55,5 +55,11 @@ describe('generated eco-book.json', () => {
     expect(family("Queen's Gambit Declined")).toMatchObject({ side: 'black', firstMove: '1.d4' });
     expect(family('English Opening')).toMatchObject({ side: 'white', firstMove: '1.c4' });
     expect(family('Ruy Lopez')).toMatchObject({ side: 'white', firstMove: '1.e4' });
+    expect(family('Four Knights Game')).toMatchObject({ side: 'white', firstMove: '1.e4' });
+    expect(family('Vienna Gambit')).toMatchObject({ side: 'white', firstMove: '1.e4' });
+  });
+
+  it('never splits a family on a comma sub-line', () => {
+    expect(book.families.filter((f) => f.name.includes(','))).toEqual([]);
   });
 });

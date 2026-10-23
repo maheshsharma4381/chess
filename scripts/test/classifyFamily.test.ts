@@ -6,6 +6,11 @@ describe('familyOf', () => {
     expect(familyOf('Sicilian Defense: Najdorf Variation')).toBe('Sicilian Defense');
     expect(familyOf('Ruy Lopez')).toBe('Ruy Lopez');
   });
+
+  it('also stops at a comma, which Lichess uses for sub-lines without a colon', () => {
+    expect(familyOf('Vienna Gambit, with Max Lange Defense')).toBe('Vienna Gambit');
+    expect(familyOf('London System, with Bd3')).toBe('London System');
+  });
 });
 
 describe('classifyFamily', () => {
@@ -25,6 +30,17 @@ describe('classifyFamily', () => {
     expect(classifyFamily('Zukertort Opening', ['Nf3'])).toEqual({
       side: 'white',
       firstMove: '1.Nf3',
+    });
+  });
+
+  it('treats named "Game" openings as White systems unless the name says Black chose it', () => {
+    expect(classifyFamily('Four Knights Game', ['e4', 'e5', 'Nf3', 'Nc6', 'Nc3', 'Nf6'])).toEqual({
+      side: 'white',
+      firstMove: '1.e4',
+    });
+    expect(classifyFamily('Center Game Accepted', ['e4', 'e5', 'd4', 'exd4'])).toEqual({
+      side: 'black',
+      firstMove: '1.e4',
     });
   });
 

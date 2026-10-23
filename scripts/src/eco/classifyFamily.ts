@@ -1,7 +1,7 @@
 import type { OpeningFamily, WhiteFirstMove } from '@chess/types';
 
 const BLACK_NAME = /Defen[cs]e|Declined|Accepted|Counter-?gambit/i;
-const WHITE_NAME = /Opening|Attack|System/i;
+const WHITE_NAME = /Opening|Attack|System|Game/i;
 
 const FIRST_MOVES: Record<string, WhiteFirstMove> = {
   e4: '1.e4',
@@ -10,9 +10,12 @@ const FIRST_MOVES: Record<string, WhiteFirstMove> = {
   Nf3: '1.Nf3',
 };
 
-/** "Sicilian Defense: Najdorf Variation" -> "Sicilian Defense". */
+/**
+ * "Sicilian Defense: Najdorf Variation" -> "Sicilian Defense".
+ * Some Lichess sub-lines use a comma instead ("London System, with Bd3").
+ */
 export function familyOf(name: string): string {
-  return (name.split(':')[0] ?? name).trim();
+  return (name.split(/[:,]/)[0] ?? name).trim();
 }
 
 /**

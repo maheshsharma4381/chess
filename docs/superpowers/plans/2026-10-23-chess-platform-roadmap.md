@@ -52,10 +52,14 @@ Expo (Router) + NativeWind + Reanimated + Gesture Handler + expo-haptics + expo-
 
 ## Phase 0: Foundation and Monorepo
 
-**Deliverable:** `pnpm install && pnpm build && pnpm test` passes in a fresh clone. The ECO book is generated.
+**Deliverable:** `pnpm install && pnpm typecheck && pnpm lint && pnpm test` passes in a fresh clone (libraries ship as TS source, so there is no build step until apps exist). The ECO book is generated.
 
 - [ ] `git init`, Turborepo + pnpm workspaces, shared `tsconfig`, ESLint, Prettier, Vitest, `.env.example`, GitHub Actions CI (lint, typecheck, test).
-- [ ] `packages/types`: socket event map (client↔server), `GameState`, `ClockState`, `ReviewReport`, `MoveClassification`, `ExplorerResponse`, `Puzzle`, `BotProfile`, `Tournament`, `LeagueDivision`.
+- [x] `packages/types` foundation: `MoveClassification` + `CLASSIFICATION_META`, `EcoBook` / `OpeningEntry` / `OpeningFamily`. **Every other shared type lands with the phase that first uses it** (YAGNI, so types are designed against real code):
+  - Phase 1: `ReviewReport`, `MoveAnalysis`, `EngineLine`, `ExplorerResponse`, `CounterMove`, `CoachExplanation`, `Glicko2Rating`.
+  - Phase 2: `BotProfile`, `BoardTheme`, `SoundEvent`.
+  - Phase 5: socket event map (client↔server), `GameState`, `ClockState`, `TimeControl`, move frame `[moveSAN, fen, whiteMs, blackMs, serverTimestamp]`.
+  - Phase 6: `Puzzle`, `PuzzleRushRun`. Phase 7: `Tournament`, `LeagueDivision`, `FairPlaySignal`.
 - [ ] `scripts/fetch-eco-book.ts`: downloads `a–e.tsv` from lichess-org/chess-openings, parses rows, normalizes EPD (first 4 FEN fields), writes `packages/chess-core/src/data/eco-book.json` with `byEpd` + `byEco` (grouped into White families `1.e4 / 1.d4 / 1.c4 / 1.Nf3 / Flank` and named Black defenses).
 - [ ] Offline fallback: `eco-seed.ts` holds the top 150 openings in code. The script uses it if the network fails.
 - [ ] Tests: EPD normalization, TSV parse, count sanity (≥3,400 rows. The upstream count changes over time, so don't hard-assert exactly 3,546), fallback path.
@@ -73,6 +77,11 @@ Expo (Router) + NativeWind + Reanimated + Gesture Handler + expo-haptics + expo-
 - [ ] `coach/tacticalMotifDetector.ts`: hanging piece, fork/double attack, pin/skewer, discovered attack/check, back-rank/mate threat, positional factors (center, king safety, pawn structure, development).
 - [ ] `coach/explain.ts`: template-based explanation generator in English and Hinglish (deterministic, testable). Optional LLM rewrite hook (see Suggestions).
 - [ ] `variants/chess960.ts`: start-position generator (all 960 by index) + castling rules wrapper over chess.js.
+- [ ] Carried from the Phase 0 review (deferred minors that Phase 1 code touches):
+  - `normalizeEpd`: use `chess.fen()` fields 0–3 directly, since chess.js 1.4 already emits ep only when a legal capture exists. This drops the per-call `moves({verbose})` cost. Keep the pinned-pawn test as the guard.
+  - Import `eco-book.json` through a hand-written declaration (`allowArbitraryExtensions` + `eco-book.d.json.ts`) so tsc doesn't infer a 3,865-key literal type.
+  - Split `tsconfig.base.json` into a lib base without `types: ["node"]` (chess-core/types run in browser and RN) and a node base for scripts/server/tests.
+  - Give `OpeningFamily` an `epds` list (or move `familyOf` into chess-core) so the encyclopedia can list a family's lines. Derive `firstMove` from the family's most common first move, not the shortest line (Pterodactyl and Borg are mis-tagged 1.d4).
 
 ## Phase 2: Web Board and Offline Play (first visible product)
 
