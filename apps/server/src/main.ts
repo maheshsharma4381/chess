@@ -16,7 +16,14 @@ const app = createApp({
   config,
   logger,
   health: { db: () => prisma.$queryRaw`SELECT 1`, redis: () => redis.ping() },
-  routers: buildRouters({ config, logger, prisma, redis }),
+  routers: buildRouters({
+    config,
+    logger,
+    prisma,
+    redis,
+    redisPrefix: 'chess:',
+    now: () => new Date(),
+  }),
 });
 const server = createServer(app);
 const io = attachSocket(server, { logger });
