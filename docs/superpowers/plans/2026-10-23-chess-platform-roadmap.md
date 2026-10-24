@@ -95,6 +95,13 @@ Expo (Router) + NativeWind + Reanimated + Gesture Handler + expo-haptics + expo-
 - [ ] Captured pieces tray + material diff. Live opening banner. Move list with badges.
 - [ ] Bots: 12 personalities across 4 tiers (original names), strength via Skill Level + UCI_Elo + move-time + personality biases (e.g. early-queen bot). Challenge vs. Friendly modes. Dialogue system with event triggers.
 - [ ] Playwright smoke tests: play a full game vs. bot, premove, promotion, arrows.
+- [ ] Carried from the Phase 1 review (deferred minors that the web app touches first):
+  - chess-core: add `"sideEffects": false` and a separate `@chess/chess-core/book` entry so pages that only need math/Glicko don't bundle the 1.7MB book. Lazy-load the book.
+  - `analyzeGame` / explorer `query`: accept an `AbortSignal` (user leaves the review page), and add an explorer timeout.
+  - `parsePgn`: strip headers line-wise (`]` inside values) and stop at the first result token (multi-game PGN paste).
+  - The engine adapter returning `[]` for a live position should throw, not become 0.00.
+  - Coach wording: "theory continues X" instead of "main line"; Hinglish `aur` in fork targets; skip the mover's own pin/skewer on bad moves; exclude castling rook rays from "discovered"; base opening-ply limits on the fullmove number for FEN starts.
+  - Plan text: Phase 1 Task 7 "≈18.9" should read 28.5. R9 has a cliff (+200 cp Blunder vs +250 cp Mistake), so revisit it with real games.
 
 ## Phase 3: Game Review, Analysis Studio and Explorer UI (web)
 
