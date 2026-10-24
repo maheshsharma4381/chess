@@ -10,7 +10,8 @@ import { EvalBar } from '@/components/game/EvalBar';
 import { MoveList } from '@/components/game/MoveList';
 import { OpeningBanner, useOpening } from '@/components/game/OpeningBanner';
 import type { MoveIntent } from '@/lib/board/reducer';
-import { engineStore } from '@/lib/engine/browserEngine';
+import { engineStore, type EngineStatus } from '@/lib/engine/browserEngine';
+import { sanToWords } from '@/lib/game/speech';
 import { createBotGame, type BotEngine, type BotMode, type Side } from '@/lib/game/botGameStore';
 import { SoundEngine } from '@/lib/sound/SoundEngine';
 import { BotAvatar } from './BotAvatar';
@@ -102,6 +103,14 @@ export function BotGame({ botId, mode, color, engine }: BotGameProps) {
         ? 'You win'
         : `${s.bot.name} wins`;
 
+  // Screen-reader narration: the bot's latest move and the result.
+  const engineState = useEngineStatus(Boolean(engine));
+  const lastBotMove = [...s.history].reverse().find((m) => m.color === botSide);
+  const announcements = [
+    lastBotMove && `${s.bot.name} played ${sanToWords(lastBotMove.san)}`,
+    s.result && `${winnerText} ${REASON[s.result.reason]}`,
+  ].filter((a): a is string => Boolean(a));
+
   return (
     <div
       className="mx-auto grid max-w-6xl gap-4 px-4 py-4 lg:grid-cols-[minmax(0,38rem)_1fr]"
@@ -145,7 +154,7 @@ export function BotGame({ botId, mode, color, engine }: BotGameProps) {
               type="button"
               aria-pressed={s.lang === lang}
               onClick={() => s.setLang(lang)}
-              className="min-h-8 cursor-pointer rounded-[4px] px-2 text-text-muted aria-pressed:bg-surface-raised aria-pressed:text-text"
+              className="min-h-11 cursor-pointer rounded-[4px] px-3 text-text-muted aria-pressed:bg-surface-raised aria-pressed:text-text"
             >
               {lang === 'en' ? 'English' : 'Hinglish'}
             </button>
@@ -154,9 +163,15 @@ export function BotGame({ botId, mode, color, engine }: BotGameProps) {
 
         <EngineNotice
           error={s.engineError}
+          engineStatus={engineState.status}
+          engineMessage={engineState.message}
           onRetry={() => void s.retryEngine()}
-          injected={Boolean(engine)}
         />
+        <div role="log" aria-label="Game updates" aria-live="polite" className="sr-only">
+          {announcements.map((a, i) => (
+            <p key={i}>{a}</p>
+          ))}
+        </div>
         <OpeningBanner opening={opening} />
 
         <div className="min-h-32 flex-1 overflow-y-auto">
@@ -267,36 +282,48 @@ function ControlButton({
   );
 }
 
-/** Engine loading/error state for the shared browser worker (skipped when an engine is injected). */
-function EngineNotice({
+/**
+ * Engine loading/error state: the game's own error, or the shared worker's (e.g. it crashed
+ * between moves). Either one shows a Retry (plan Review Focus 3).
+ */
+export function EngineNotice({
   error,
+  engineStatus,
+  engineMessage,
   onRetry,
-  injected,
 }: {
   error: string | null;
+  engineStatus: EngineStatus;
+  engineMessage: string | null;
   onRetry: () => void;
-  injected: boolean;
 }) {
-  const status = useStore(engineStore(), (st) => st.status);
-  if (error) {
+  const message = error ?? (engineStatus === 'error' ? (engineMessage ?? 'unknown error') : null);
+  if (message) {
     return (
       <div
         role="alert"
         className="flex items-center justify-between gap-2 rounded-(--radius-control) border border-danger px-3 py-2 text-sm"
       >
-        <span>The engine stopped: {error}</span>
+        <span>The engine stopped: {message}</span>
         <button
           type="button"
           onClick={onRetry}
-          className="min-h-9 cursor-pointer rounded-[4px] bg-danger px-3 font-semibold text-on-danger"
+          className="min-h-11 cursor-pointer rounded-[4px] bg-danger px-3 font-semibold text-on-danger"
         >
           Retry
         </button>
       </div>
     );
   }
-  if (!injected && status === 'loading') {
+  if (engineStatus === 'loading') {
     return <p className="text-sm text-text-muted">Loading the engine…</p>;
   }
   return null;
+}
+
+/** Shared worker state; an injected (test) engine counts as always ready. */
+function useEngineStatus(injected: boolean): { status: EngineStatus; message: string | null } {
+  const status = useStore(engineStore(), (st) => st.status);
+  const message = useStore(engineStore(), (st) => st.error);
+  return injected ? { status: 'ready', message: null } : { status, message };
 }

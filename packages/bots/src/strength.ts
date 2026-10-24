@@ -65,6 +65,11 @@ export interface BotMoveContext {
   /** Engine lines for the bot's position (side-to-move POV), best first. */
   lines: EngineLine[];
   legalUci: string[];
+  /**
+   * The engine's `bestmove`. With UCI_LimitStrength Stockfish weakens itself when choosing
+   * it, so it can differ from lines[0] and is the authoritative move for UCI_Elo bots.
+   */
+  engineMove?: string;
 }
 
 const EARLY_PLIES = 10;
@@ -79,11 +84,15 @@ const cpOf = (score: Score) =>
  * personality biases. Always returns a legal move.
  */
 export function chooseBotMove(bot: BotProfile, ctx: BotMoveContext, rng: () => number): string {
+  if (ctx.legalUci.length === 0) throw new Error(`No legal moves in ${ctx.fen}`);
   const legal = new Set(ctx.legalUci);
   const lines = ctx.lines.filter((l) => legal.has(l.uci));
+  const engineMove = ctx.engineMove && legal.has(ctx.engineMove) ? ctx.engineMove : undefined;
   const best = lines[0];
+  if (bot.rating >= ENGINE_ELO_FLOOR && !bot.style.earlyQueen) {
+    return engineMove ?? best?.uci ?? pick(ctx.legalUci, rng);
+  }
   if (!best) return pick(ctx.legalUci, rng);
-  if (bot.rating >= ENGINE_ELO_FLOOR && !bot.style.earlyQueen) return best.uci;
 
   const chess = new Chess(ctx.fen);
   const pieceOf = (uci: string) => chess.get(uci.slice(0, 2) as Parameters<Chess['get']>[0])?.type;
@@ -96,7 +105,7 @@ export function chooseBotMove(bot: BotProfile, ctx: BotMoveContext, rng: () => n
     );
     if (queenMove) return queenMove.uci;
   }
-  if (bot.rating >= ENGINE_ELO_FLOOR) return best.uci;
+  if (bot.rating >= ENGINE_ELO_FLOOR) return engineMove ?? best.uci;
 
   if (rng() < curve(bot.rating, BLUNDER_CHANCE)) return pick(ctx.legalUci, rng);
 

@@ -131,6 +131,28 @@ describe('chooseBotMove', () => {
     expect(ctx.legalUci).toContain(move);
   });
 
+  it("plays Stockfish's strength-limited bestmove for UCI_Elo bots", () => {
+    const rng = createRng(12);
+    const move = chooseBotMove(botById('elena'), { ...ctx, engineMove: 'g1f3' }, rng);
+    expect(move).toBe('g1f3'); // not lines[0] (e2e4)
+  });
+
+  it('ignores an illegal engine bestmove', () => {
+    const rng = createRng(12);
+    expect(chooseBotMove(botById('elena'), { ...ctx, engineMove: 'e2e5' }, rng)).toBe('e2e4');
+  });
+
+  it('throws a clear error when the position has no legal moves', () => {
+    const rng = createRng(1);
+    expect(() =>
+      chooseBotMove(
+        botById('pip'),
+        { fen: '7k/5Q2/6K1/8/8/8/8/8 b - - 0 1', ply: 40, lines: [], legalUci: [] },
+        rng,
+      ),
+    ).toThrow(/no legal moves/i);
+  });
+
   it('ignores engine lines that are not legal in the position', () => {
     const rng = createRng(9);
     const move = chooseBotMove(

@@ -7,18 +7,23 @@ const CREDITS = [
     name: 'Stockfish 19',
     license: 'GPL-3.0',
     detail:
-      'The engine runs in your browser as a separate WebAssembly program (stockfish.js by Nathan Rugg). Its full license ships at /engine/Copying.txt.',
+      'The engine runs in your browser as a separate WebAssembly program: stockfish.js 19.0.1 (lite, single-threaded) by Nathan Rugg, built from Stockfish 19. The exact source of the shipped build is the stockfish.js v19.0.1 release.',
     links: [
+      {
+        label: 'stockfish.js source (v19.0.1)',
+        href: 'https://github.com/nmrugg/stockfish.js/tree/v19.0.1',
+      },
       { label: 'Stockfish source', href: 'https://github.com/official-stockfish/Stockfish' },
-      { label: 'stockfish.js source', href: 'https://github.com/nmrugg/stockfish.js' },
+      { label: 'GPL-3.0 license text (Copying.txt)', href: '/engine/Copying.txt' },
     ],
   },
   {
     name: 'Chess pieces "cburnett"',
-    license: 'BSD (tri-licensed GPL / BSD / GFDL)',
+    license: 'BSD (author offers GFDL / CC BY-SA 3.0 / BSD / GPL)',
     detail:
-      'Piece artwork by Colin M. L. Burnett, via Wikimedia Commons, used under the BSD license.',
+      'Piece artwork by Colin M. L. Burnett, via Wikimedia Commons, used under the BSD license. Copyright (c) 2006.',
     links: [
+      { label: 'BSD notice (LICENSE.txt)', href: '/pieces/cburnett/LICENSE.txt' },
       {
         label: 'Wikimedia Commons',
         href: 'https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces',

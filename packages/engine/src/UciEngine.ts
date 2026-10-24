@@ -26,8 +26,10 @@ export class EngineError extends Error {
 export interface UciEngineOptions {
   /** For `uciok` / `readyok`. Default 15s (the WASM download happens before uciok). */
   readyTimeoutMs?: number;
-  /** For `bestmove` after `go`. Default 120s. */
+  /** For `bestmove` after a depth search. Default 120s. */
   searchTimeoutMs?: number;
+  /** A timed search (`movetime`) fails after movetime + this. Default 10s. */
+  searchGraceMs?: number;
 }
 
 export interface BestMoveOptions {
@@ -59,6 +61,7 @@ export class UciEngine implements EngineAdapter {
   private dead: EngineError | null = null;
   private readonly readyTimeoutMs: number;
   private readonly searchTimeoutMs: number;
+  private readonly searchGraceMs: number;
 
   constructor(
     private readonly transport: UciTransport,
@@ -66,6 +69,7 @@ export class UciEngine implements EngineAdapter {
   ) {
     this.readyTimeoutMs = opts.readyTimeoutMs ?? 15_000;
     this.searchTimeoutMs = opts.searchTimeoutMs ?? 120_000;
+    this.searchGraceMs = opts.searchGraceMs ?? 10_000;
     transport.onLine((chunk) => {
       for (const line of chunk.split(/\r?\n/)) {
         if (line) for (const handle of [...this.handlers]) handle(line);
@@ -95,7 +99,14 @@ export class UciEngine implements EngineAdapter {
   ): Promise<EngineLine[]> {
     return this.exclusive(async () => {
       const options = { UCI_LimitStrength: 'false', MultiPV: String(opts.multiPv) };
-      return (await this.search(fen, `go depth ${opts.depth}`, options, opts.signal)).lines;
+      const search = await this.search(
+        fen,
+        `go depth ${opts.depth}`,
+        options,
+        opts.signal,
+        this.searchTimeoutMs,
+      );
+      return search.lines;
     });
   }
 
@@ -116,9 +127,11 @@ export class UciEngine implements EngineAdapter {
       }
       const go = ['go'];
       if (opts.depth !== undefined) go.push(`depth ${opts.depth}`);
-      if (opts.movetime !== undefined || opts.depth === undefined)
-        go.push(`movetime ${opts.movetime ?? 1000}`);
-      return this.search(fen, go.join(' '), options, opts.signal);
+      const movetime = opts.movetime ?? (opts.depth === undefined ? 1000 : undefined);
+      if (movetime !== undefined) go.push(`movetime ${movetime}`);
+      // A timed search that overruns by seconds means the engine is stuck: fail fast.
+      const timeout = movetime !== undefined ? movetime + this.searchGraceMs : this.searchTimeoutMs;
+      return this.search(fen, go.join(' '), options, opts.signal, timeout);
     });
   }
 
@@ -138,6 +151,7 @@ export class UciEngine implements EngineAdapter {
     go: string,
     options: SearchOptions,
     signal: AbortSignalLike | undefined,
+    timeoutMs: number,
   ): Promise<{ bestmove: string; lines: EngineLine[] }> {
     throwIfAborted(signal);
     await this.init();
@@ -161,7 +175,7 @@ export class UciEngine implements EngineAdapter {
     signal?.addEventListener('abort', onAbort);
     try {
       this.transport.send(`position fen ${fen}`);
-      const line = await this.request(go, (l) => l.startsWith('bestmove'), this.searchTimeoutMs);
+      const line = await this.request(go, (l) => l.startsWith('bestmove'), timeoutMs);
       if (aborted) throw new AbortError();
       const best = parseBestMove(line);
       const lines = [...latest.entries()]

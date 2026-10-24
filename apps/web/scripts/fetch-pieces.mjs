@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 const outDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'pieces', 'cburnett');
 mkdirSync(outDir, { recursive: true });
 
-const HEADERS = { 'User-Agent': 'chess-platform-build/0.1 (asset fetch; ved300406@gmail.com)' };
+// Wikimedia asks for a descriptive User-Agent; no personal contact details belong in the repo.
+const HEADERS = { 'User-Agent': 'chess-platform-build/0.1 (piece asset fetch)' };
 const PIECES = ['k', 'q', 'r', 'b', 'n', 'p'];
 // Downloaded SVG is untrusted: refuse anything that could run code if ever inlined.
 const UNSAFE = /<script|\son\w+\s*=|javascript:|<foreignObject/i;

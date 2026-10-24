@@ -113,6 +113,24 @@ Expo (Router) + NativeWind + Reanimated + Gesture Handler + expo-haptics + expo-
 - [ ] Analysis Studio: FEN/PGN paste, board editor, MultiPV up to 3 live lines, flip.
 - [ ] Opening Explorer panel (Masters / Lichess DB, rating + speed filters, tri-color bars, badges) + searchable ECO encyclopedia with "practice this defense".
 - [ ] Export: PGN copy, FEN copy, client-side animated GIF.
+- [ ] Carried from the Phase 2 review (deferred minors):
+  - **Bot game store:**
+    - Add `dispose()` (cancel the search on unmount and New game; avoids StrictMode's double search).
+    - Make the Friendly-mode eval analysis abortable.
+    - Allow takeback after the game ends in Friendly mode.
+    - Reset orientation when the colour changes.
+    - Add store tests for insufficient material, threefold repetition and the 50-move rule.
+  - **Engine store:** a `retry()` while a start is in flight spawns a second worker.
+  - **Board:**
+    - New game should clear arrows (key the board by game).
+    - Show a drag ghost for pieces that exist only on the premove board.
+    - Promotion dialog: return focus to the board when it closes, and add a touch Cancel button.
+  - **Contrast:**
+    - Board coordinates (2.2–2.8:1).
+    - Opening ECO text (`#a88865`, 4.44:1).
+    - Master-tier avatar initials (3.7:1).
+  - **Accessibility:** CapturedPieces' `aria-label` sits on a span (use role="img"); move-list buttons are 32px and inert in bot games.
+  - **Persistence:** save the mute setting across games.
 
 ## Phase 4: Backend Core (accounts and persistence)
 

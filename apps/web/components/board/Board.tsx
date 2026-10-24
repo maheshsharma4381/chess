@@ -91,11 +91,22 @@ export function SquaresGrid({
         <div role="row" key={r} className="contents">
           {row.map((sq) => {
             const piece = chess.get(sq as Square);
-            const label = piece
-              ? `${sq}, ${piece.color === 'w' ? 'white' : 'black'} ${PIECE_NAMES[piece.type]}`
-              : `${sq}, empty`;
             const color = squareColor(sq);
             const isTarget = targets.includes(sq);
+            // Screen readers hear the square's state, not only its piece.
+            const states = [
+              sq === selected && 'selected',
+              isTarget && 'legal move',
+              premoveSquares?.has(sq) && 'premove',
+              highlights.includes(sq) && 'highlighted',
+            ].filter(Boolean);
+            const label = [
+              sq,
+              piece
+                ? `${piece.color === 'w' ? 'white' : 'black'} ${PIECE_NAMES[piece.type]}`
+                : 'empty',
+              ...states,
+            ].join(', ');
             const coordColor = color === 'light' ? 'var(--board-dark)' : 'var(--board-light)';
             return (
               <div role="gridcell" key={sq} className="contents">
@@ -114,7 +125,7 @@ export function SquaresGrid({
                   data-highlight={highlights.includes(sq) || undefined}
                   onClick={() => onSquareClick?.(sq)}
                   onFocus={() => onSquareFocus?.(sq)}
-                  className="relative aspect-square cursor-pointer outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
+                  className="relative aspect-square cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-inset"
                   style={{
                     background: color === 'light' ? 'var(--board-light)' : 'var(--board-dark)',
                   }}

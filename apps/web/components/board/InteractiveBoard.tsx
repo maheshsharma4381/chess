@@ -46,6 +46,26 @@ const KEY_STEPS: Record<string, [number, number]> = {
   ArrowRight: [1, 0],
 };
 
+/**
+ * Keyboard focus indicator above the pieces (a raised square would cover its own piece).
+ * White inner + slate outer rings keep 3:1 against every board theme.
+ */
+function FocusRing({ square, orientation }: { square: string; orientation: Orientation }) {
+  const { col, row } = displayPosition(square, orientation);
+  return (
+    <div
+      aria-hidden
+      data-testid="focus-ring"
+      data-square={square}
+      className="pointer-events-none absolute top-0 left-0 z-[15] size-[12.5%]"
+      style={{
+        transform: `translate(${col * 100}%, ${row * 100}%)`,
+        boxShadow: 'inset 0 0 0 3px #FFFFFF, inset 0 0 0 6px #0F172A',
+      }}
+    />
+  );
+}
+
 interface DragState {
   from: Square;
   pointerId: number;
@@ -75,6 +95,9 @@ export function InteractiveBoard({
   const gridRef = useRef<HTMLDivElement>(null);
   const squareEls = useRef(new Map<string, HTMLButtonElement>());
   const [focused, setFocused] = useState<string | null>(null);
+  // Keyboard focus ring, drawn above the pieces; pointer-initiated focus shows no ring.
+  const [ringVisible, setRingVisible] = useState(false);
+  const pointerFocus = useRef(false);
   const [drag, setDrag] = useState<DragState | null>(null);
   const arrowFrom = useRef<Square | null>(null);
   const suppressClick = useRef(false);
@@ -121,6 +144,8 @@ export function InteractiveBoard({
   };
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    pointerFocus.current = true;
+    setRingVisible(false);
     const square = squareFromPoint(e.clientX, e.clientY);
     if (!square) return;
     if (e.button === 2) {
@@ -230,12 +255,19 @@ export function InteractiveBoard({
           else squareEls.current.delete(sq);
         }}
         onSquareClick={onSquareClick}
-        onSquareFocus={setFocused}
+        onSquareFocus={(sq) => {
+          setFocused(sq);
+          setRingVisible(!pointerFocus.current);
+          pointerFocus.current = false;
+        }}
         gridHandlers={{
           onPointerDown,
           onPointerMove,
           onPointerUp,
           onPointerCancel: () => setDrag(null),
+          onBlur: (e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setRingVisible(false);
+          },
           onContextMenu: (e) => e.preventDefault(),
           onKeyDown,
         }}
@@ -246,6 +278,7 @@ export function InteractiveBoard({
         hidden={drag?.active ? drag.from : null}
       />
       <ArrowLayer arrows={state.arrows} orientation={orientation} />
+      {ringVisible && focused && <FocusRing square={focused} orientation={orientation} />}
       {draggedPiece && drag && rect && (
         <img
           aria-hidden

@@ -36,9 +36,13 @@ export function createEngineStore(deps: EngineStoreDeps = {}): StoreApi<EngineSt
   const url = deps.workerUrl ?? ENGINE_URL;
   let pending: Promise<UciEngine> | null = null;
   let current: UciEngine | null = null;
+  /** The live worker, so a failed or hung one is terminated instead of leaking. */
+  let liveTransport: UciTransport | null = null;
 
   return createStore<EngineState>()((set, get) => {
     const fail = (message: string) => {
+      liveTransport?.terminate();
+      liveTransport = null;
       pending = null;
       current = null;
       set({ status: 'error', error: message });
@@ -48,6 +52,7 @@ export function createEngineStore(deps: EngineStoreDeps = {}): StoreApi<EngineSt
       set({ status: 'loading', error: null });
       try {
         const base = createWorkerTransport(createWorker(url));
+        liveTransport = base;
         const transport: UciTransport = {
           ...base,
           onError: (cb) =>
@@ -76,6 +81,8 @@ export function createEngineStore(deps: EngineStoreDeps = {}): StoreApi<EngineSt
       },
       retry: () => {
         current?.quit();
+        liveTransport?.terminate();
+        liveTransport = null;
         pending = null;
         current = null;
         return get().getEngine();

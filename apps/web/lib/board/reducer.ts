@@ -129,9 +129,19 @@ function toggleArrow(s: BoardState, from: Square, to: Square, color: ArrowColor)
 }
 
 /** After any move: play the first premove if it is now legal, otherwise drop the queue. */
+const positionKey = (fen: string) => fen.split(' ').slice(0, 4).join(' ');
+
+function isOneMoveAfter(before: string, after: string): boolean {
+  const target = positionKey(after);
+  return new Chess(before).moves({ verbose: true }).some((m) => positionKey(m.after) === target);
+}
+
 function positionChanged(s: BoardState, fen: string): BoardState {
   const next: BoardState = { ...deselect(s), fen, pendingPromotion: null };
   if (!usersTurn(next) || next.premoves.length === 0) return next;
+  // Premoves answer the opponent's move. Any other jump (takeback, new game, navigation)
+  // invalidates them rather than playing a move the user did not make in that position.
+  if (!isOneMoveAfter(s.fen, fen)) return { ...next, premoves: [] };
 
   const [first, ...rest] = next.premoves as [Premove, ...Premove[]];
   const legal = new Chess(fen)

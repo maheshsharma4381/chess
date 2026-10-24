@@ -190,7 +190,13 @@ export function createBotGame(deps: BotGameDeps): StoreApi<BotGameState> {
         const legalUci = game.moves({ verbose: true }).map((m) => m.lan);
         const uci = chooseBotMove(
           deps.bot,
-          { fen, ply: game.history().length + 1, lines: result.lines, legalUci },
+          {
+            fen,
+            ply: game.history().length + 1,
+            lines: result.lines,
+            legalUci,
+            engineMove: result.bestmove,
+          },
           rng,
         );
         const move = game.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
@@ -297,7 +303,13 @@ export function createBotGame(deps: BotGameDeps): StoreApi<BotGameState> {
 
       async retryEngine() {
         set({ engineError: null });
-        await deps.restartEngine?.();
+        try {
+          await deps.restartEngine?.();
+        } catch (err) {
+          // A failed restart must stay visible with its Retry, never leave the game silent.
+          set({ engineError: (err as Error).message, thinking: false });
+          return;
+        }
         await botTurn();
       },
 
