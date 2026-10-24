@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Glicko-2 pools. Bot games are unrated and never touch these.
+enum RatingPool {
+  bullet
+  blitz
+  rapid
+  daily
+  puzzle
+}
+
+model User {
+  id           String        @id @default(cuid())
+  /// Lowercased and trimmed before it is stored.
+  email        String        @unique
+  passwordHash String?
+  googleSub    String?       @unique
+  username     String        @unique
+  displayName  String
+  country      String?
+  bio          String?
+  avatar       String        @default("avatar-01")
+  settings     Json          @default("{}")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  sessions     Session[]
+  ratings      Rating[]
+  ratingEvents RatingEvent[]
+  games        Game[]
+}
+
+/// One refresh-token chain per sign-in; every rotation adds a row to the same family.
+model Session {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family      String
+  refreshHash String    @unique
+  expiresAt   DateTime
+  rotatedAt   DateTime?
+  revokedAt   DateTime?
+  userAgent   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([family])
+}
+
+model Rating {
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pool       RatingPool
+  rating     Float      @default(1500)
+  rd         Float      @default(350)
+  volatility Float      @default(0.06)
+  games      Int        @default(0)
+  updatedAt  DateTime   @updatedAt
+
+  @@id([userId, pool])
+}
+
+model RatingEvent {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pool      RatingPool
+  rating    Float
+  rd        Float
+  gameId    String?
+  createdAt DateTime   @default(now())
+
+  @@index([userId, pool, createdAt])
+}
+
+model Game {
+  id           String      @id @default(cuid())
+  /// The account that saved the game.
+  userId       String?
+  owner        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Chosen by the client so a repeated save is idempotent.
+  clientGameId String?
+  whiteName    String
+  blackName    String
+  botId        String?
+  /// "white" | "black": the side the saving user played.
+  userColor    String?
+  pgn          String
+  startFen     String?
+  /// "1-0" | "0-1" | "1/2-1/2" | "*"
+  result       String
+  termination  String
+  timeControl  String?
+  pool         RatingPool?
+  rated        Boolean     @default(false)
+  plies        Int
+  reviewKey    String
+  playedAt     DateTime    @default(now())
+
+  @@unique([userId, clientGameId])
+  @@index([userId, playedAt])
+  @@index([reviewKey])
+}
+
+/// Cached Game Review reports, keyed by the moves (not headers) and the search depth.
+model ReviewReport {
+  key       String
+  depth     Int
+  report    Json
+  createdAt DateTime @default(now())
+
+  @@id([key, depth])
+}

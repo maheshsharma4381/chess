@@ -13,3 +13,4 @@ apps/web/public/engine/
 *.tsbuildinfo
 test-results/
 playwright-report/
+apps/server/src/generated/

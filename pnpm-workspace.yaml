@@ -5,6 +5,11 @@ packages:
 
 allowBuilds:
   esbuild: true
+  # Prisma downloads its schema engine (migrations) in these install scripts.
+  prisma: true
+  '@prisma/engines': true
+  # Optional native msgpack accelerator for bullmq; the JS fallback is fine.
+  msgpackr-extract: false
 
 catalog:
   '@types/node': 26.6.5

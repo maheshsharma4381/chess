@@ -1,0 +1,50 @@
+{
+  "name": "@chess/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "worker": "tsx src/worker.ts",
+    "generate": "prisma generate",
+    "db:deploy": "node scripts/db-deploy.mjs",
+    "typecheck": "prisma generate && tsc -p tsconfig.test.json",
+    "lint": "eslint .",
+    "test": "prisma generate && vitest run --testTimeout=60000"
+  },
+  "dependencies": {
+    "@chess/chess-core": "workspace:*",
+    "@chess/engine": "workspace:*",
+    "@chess/types": "workspace:*",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "bullmq": "6.3.19",
+    "chess.js": "catalog:",
+    "cookie-parser": "1.4.7",
+    "express": "5.3.0",
+    "helmet": "8.3.0",
+    "ioredis": "6.0.0",
+    "jose": "6.2.13",
+    "pg": "8.23.1",
+    "pino": "10.4.0",
+    "socket.io": "4.8.4",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.11",
+    "@electric-sql/pglite-socket": "0.2.14",
+    "@types/cookie-parser": "1.4.10",
+    "@types/express": "5.0.6",
+    "@types/node": "catalog:",
+    "@types/pg": "8.23.1",
+    "@types/supertest": "7.2.1",
+    "eslint": "catalog:",
+    "prisma": "7.10.1",
+    "socket.io-client": "4.8.4",
+    "supertest": "7.3.1",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
