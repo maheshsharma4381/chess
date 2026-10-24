@@ -4,6 +4,7 @@ const NAV = [
   { href: '/play/bots', label: 'Play' },
   { href: '/analysis', label: 'Analysis' },
   { href: '/review', label: 'Review' },
+  { href: '/openings', label: 'Openings' },
 ];
 
 export function SiteHeader() {
