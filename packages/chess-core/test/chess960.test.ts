@@ -14,7 +14,8 @@ describe('chess960StartFen', () => {
     expect(backRank(959)).toBe('RKRNNQBB');
   });
 
-  it('produces 960 distinct, valid back ranks', () => {
+  // Exhaustive over all 960 positions; CPU-bound, so it gets room when the suite runs in parallel.
+  it('produces 960 distinct, valid back ranks', { timeout: 30_000 }, () => {
     const seen = new Set<string>();
     for (let i = 0; i < 960; i++) {
       const rank = backRank(i);
