@@ -10,3 +10,13 @@ export {
   type FetchLike,
 } from './opening/OpeningExplorerService';
 export { DEFAULT_GLICKO2, GLICKO2_MAX_RD, updateGlicko2 } from './rating/glicko2';
+export {
+  estimateRating,
+  expectedAccuracy,
+  gameAccuracy,
+  moveAccuracy,
+  moverWin,
+  phaseAccuracy,
+  phaseOf,
+  winPercent,
+} from './game-review/math';
