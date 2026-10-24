@@ -1,4 +1,5 @@
 export * from './abort';
+export * from './bots';
 export * from './classification';
 export * from './coach';
 export * from './explorer';
