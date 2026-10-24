@@ -9,6 +9,14 @@ export {
   type ExplorerServiceOptions,
   type FetchLike,
 } from './opening/OpeningExplorerService';
+export {
+  PIECE_VALUE,
+  SACRIFICE_THRESHOLD,
+  isSacrifice,
+  majorsAndMinors,
+  materialBalance,
+  see,
+} from './board/material';
 export { DEFAULT_GLICKO2, GLICKO2_MAX_RD, updateGlicko2 } from './rating/glicko2';
 export {
   estimateRating,
