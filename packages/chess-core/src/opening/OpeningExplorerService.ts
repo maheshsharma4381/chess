@@ -56,11 +56,11 @@ interface RawExplorer {
  * without DOM or Node types; browser, React Native and Node fetch all satisfy it.
  */
 export type FetchLike = {
-  // Method syntax keeps parameters bivariant, so the platform `fetch` (whose RequestInit
-  // wants a full DOM AbortSignal) is assignable even though we only pass an AbortSignalLike.
+  // Method syntax keeps parameters bivariant, and `init` is loose enough that the platform
+  // RequestInit (HeadersInit, AbortSignal | null) is compatible, so `fetch` itself is a FetchLike.
   fetch(
     url: string,
-    init?: { headers?: Record<string, string>; signal?: AbortSignalLike },
+    init?: { headers?: unknown; signal?: AbortSignalLike | null },
   ): Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
 }['fetch'];
 
