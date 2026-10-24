@@ -1,4 +1,10 @@
+import { loadEnvConfig } from '@next/env';
+import { fileURLToPath } from 'node:url';
 import type { NextConfig } from 'next';
+
+// Secrets (e.g. LICHESS_API_TOKEN for the explorer proxy) live in the monorepo root .env.
+// Only NEXT_PUBLIC_* variables ever reach the browser bundle.
+loadEnvConfig(fileURLToPath(new URL('../../', import.meta.url)));
 
 const config: NextConfig = {
   // Workspace packages ship TypeScript source.
