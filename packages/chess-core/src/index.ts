@@ -9,3 +9,4 @@ export {
   type ExplorerServiceOptions,
   type FetchLike,
 } from './opening/OpeningExplorerService';
+export { DEFAULT_GLICKO2, GLICKO2_MAX_RD, updateGlicko2 } from './rating/glicko2';
