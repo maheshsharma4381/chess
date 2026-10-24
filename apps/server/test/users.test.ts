@@ -1,4 +1,4 @@
-﻿import request from 'supertest';
+import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp, cookie, type TestApp } from './helpers/app';
 import { startTestDb, type TestDb } from './helpers/db';
