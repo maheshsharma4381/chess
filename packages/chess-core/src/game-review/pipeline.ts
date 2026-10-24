@@ -278,6 +278,7 @@ export async function analyzeGame(
     MIN_MOVES_FOR_RATING;
 
   return {
+    startFen: start,
     moves: reviews,
     accuracy,
     phaseAccuracy: phaseAccuracy(winGraph, accuracies, colors, phases),

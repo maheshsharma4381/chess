@@ -56,6 +56,8 @@ export interface MoveReview {
 }
 
 export interface ReviewReport {
+  /** Position before the first move (from the PGN's FEN header, or the standard start). */
+  startFen: string;
   moves: MoveReview[];
   accuracy: Record<Color, number>;
   phaseAccuracy: Record<Color, PhaseAccuracy>;

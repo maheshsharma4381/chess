@@ -168,6 +168,13 @@ describe('analyzeGame', () => {
     const pgn = `[SetUp "1"]\n[FEN "k7/8/1Q6/8/8/8/8/7K w - - 0 1"]\n\n1. Qc7 1/2-1/2`;
     const report = await analyzeGame({ pgn }, { engine: new FakeEngine(), book });
     expect(report.moves[0]?.fenBefore).toBe('k7/8/1Q6/8/8/8/8/7K w - - 0 1');
+    expect(report.startFen).toBe('k7/8/1Q6/8/8/8/8/7K w - - 0 1');
+  });
+
+  it('reports the start position even for a game without moves', async () => {
+    const pgn = `[SetUp "1"]\n[FEN "k7/8/1Q6/8/8/8/8/7K w - - 0 1"]\n\n*`;
+    const report = await analyzeGame({ pgn }, { engine: new FakeEngine(), book });
+    expect(report.startFen).toBe('k7/8/1Q6/8/8/8/8/7K w - - 0 1');
   });
 
   it('rejects an illegal move with a message naming it', async () => {
