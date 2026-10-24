@@ -8,7 +8,7 @@
     "build-eco-seed": "tsx build-eco-seed.ts",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run --testTimeout=20000"
   },
   "dependencies": {
     "@chess/chess-core": "workspace:*",

@@ -1,0 +1,53 @@
+@import 'tailwindcss';
+
+/* Mirrors lib/design/tokens.ts (test/design-tokens.test.ts keeps them in sync). */
+@theme {
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-raised: #273449;
+  --color-border: #334155;
+  --color-text: #f1f5f9;
+  --color-text-muted: #94a3b8;
+  --color-brand: #81b64c;
+  --color-on-brand: #0f172a;
+  --color-brand-hover: #95c95d;
+  --color-accent: #d97706;
+  --color-on-accent: #0f172a;
+  --color-danger: #dc2626;
+  --color-on-danger: #ffffff;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --ease-standard: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --radius-control: 6px;
+  --radius-panel: 10px;
+  --radius-dialog: 14px;
+}
+
+:root {
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
