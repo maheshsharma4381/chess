@@ -2,6 +2,21 @@ import type { CoachLanguage } from './coach';
 
 export type BotTier = 'beginner' | 'intermediate' | 'advanced' | 'master';
 
+/** Spec sound events (web: Web Audio synth; mobile: expo-av). */
+export const SOUND_EVENTS = [
+  'move-self',
+  'move-opponent',
+  'capture',
+  'check',
+  'castle',
+  'promote',
+  'game-start',
+  'game-end',
+  'ten-seconds-low-time',
+] as const;
+
+export type SoundEvent = (typeof SOUND_EVENTS)[number];
+
 /** Moments a bot can react to in its speech bubble. */
 export const BOT_EVENTS = [
   'game-start',
