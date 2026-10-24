@@ -5,6 +5,7 @@ import { BookOpen, FlipVertical2, PencilRuler } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import type { EngineAdapter } from '@chess/chess-core';
 import { InteractiveBoard } from '@/components/board/InteractiveBoard';
+import { ExportMenu } from '@/components/export/ExportMenu';
 import { ExplorerPanel } from '@/components/explorer/ExplorerPanel';
 import { EvalBar } from '@/components/game/EvalBar';
 import { MoveList } from '@/components/game/MoveList';
@@ -13,6 +14,7 @@ import { importGame, playUci, type AnalysisLine } from '@/lib/analysis/line';
 import { useLiveAnalysis } from '@/lib/analysis/useLiveAnalysis';
 import type { MoveIntent } from '@/lib/board/reducer';
 import { engineStore } from '@/lib/engine/browserEngine';
+import { linePgn } from '@/lib/export/pgn';
 import type { ExplorerQueryService } from '@/lib/explorer/useExplorer';
 import { BoardEditor } from './BoardEditor';
 import { EnginePanel } from './EnginePanel';
@@ -229,6 +231,14 @@ export function AnalysisStudio({
             Load
           </button>
         </form>
+
+        <ExportMenu
+          pgn={linePgn(line, { Event: 'Analysis' })}
+          fen={fen}
+          fens={positions.fens}
+          lastMoves={[null, ...positions.moves]}
+          orientation={orientation}
+        />
       </aside>
     </main>
   );

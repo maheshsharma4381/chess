@@ -37,6 +37,25 @@ const CREDITS = [
     links: [{ label: 'chess-openings', href: 'https://github.com/lichess-org/chess-openings' }],
   },
   {
+    name: 'Opening explorer statistics',
+    license: 'Lichess API terms',
+    detail:
+      'Masters and Lichess game statistics come from the Lichess opening explorer, fetched through this site’s server.',
+    links: [{ label: 'Lichess API', href: 'https://lichess.org/api' }],
+  },
+  {
+    name: 'chess.js',
+    license: 'BSD-2-Clause',
+    detail: 'Move generation and PGN/FEN handling. Copyright (c) Jeff Hlywa.',
+    links: [{ label: 'chess.js', href: 'https://github.com/jhlywa/chess.js' }],
+  },
+  {
+    name: 'gifenc',
+    license: 'MIT',
+    detail: 'Animated GIF export. Copyright (c) 2017 Matt DesLauriers.',
+    links: [{ label: 'gifenc', href: 'https://github.com/mattdesl/gifenc' }],
+  },
+  {
     name: 'Inter typeface',
     license: 'SIL Open Font License 1.1',
     detail: 'By Rasmus Andersson.',

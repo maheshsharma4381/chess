@@ -178,3 +178,15 @@ describe('/analysis page', () => {
     expect(screen.getByRole('grid', { name: /board/i })).toBeInTheDocument();
   });
 });
+
+describe('<AnalysisStudio> export', () => {
+  it('copies the PGN of the line on the board', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+    studio({ initialPgn: '1. e4 e5' });
+    await user.click(screen.getByRole('button', { name: 'Copy PGN' }));
+    const pgn = writeText.mock.calls[0]![0];
+    expect(pgn).toContain('[Event "Analysis"]');
+    expect(pgn.trim().endsWith('1. e4 e5 *')).toBe(true);
+  });
+});

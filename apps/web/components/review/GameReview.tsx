@@ -6,6 +6,7 @@ import { useStore } from 'zustand';
 import type { EngineAdapter } from '@chess/chess-core';
 import type { CoachLanguage } from '@chess/types';
 import { InteractiveBoard } from '@/components/board/InteractiveBoard';
+import { ExportMenu } from '@/components/export/ExportMenu';
 import { EvalBar } from '@/components/game/EvalBar';
 import { MoveList } from '@/components/game/MoveList';
 import { engineStore } from '@/lib/engine/browserEngine';
@@ -253,6 +254,17 @@ export function GameReview({ pgn, depth = QUICK_DEPTH, engine }: GameReviewProps
             </button>
           )}
         </div>
+
+        <ExportMenu
+          pgn={pgn}
+          fen={move?.fenAfter ?? report.startFen}
+          fens={[report.startFen, ...report.moves.map((m) => m.fenAfter)]}
+          lastMoves={[
+            null,
+            ...report.moves.map((m) => [m.uci.slice(0, 2), m.uci.slice(2, 4)] as const),
+          ]}
+          orientation={orientation}
+        />
       </aside>
     </main>
   );
