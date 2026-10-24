@@ -3,6 +3,7 @@ import type { CSSProperties, HTMLAttributes, Ref } from 'react';
 import type { MoveClassification } from '@chess/types';
 import { trackPieces } from '@/lib/board/pieceTracking';
 import { squareColor, squaresInDisplayOrder, type Orientation } from '@/lib/board/squares';
+import { coordinateInks } from '@/lib/design/ink';
 import { BOARD_OVERLAYS, BOARD_THEMES, type BoardThemeName } from '@/lib/design/tokens';
 import { ClassificationBadge } from './ClassificationBadge';
 import { PieceLayer } from './PieceLayer';
@@ -72,6 +73,7 @@ export function SquaresGrid({
     ? chess.findPiece({ type: 'k', color: chess.turn() })[0]
     : undefined;
   const colors = BOARD_THEMES[theme];
+  const inks = coordinateInks(colors);
   const leftFile = orientation === 'white' ? 'a' : 'h';
   const bottomRank = orientation === 'white' ? '1' : '8';
   const style = { '--board-light': colors.light, '--board-dark': colors.dark } as CSSProperties;
@@ -107,7 +109,7 @@ export function SquaresGrid({
                 : 'empty',
               ...states,
             ].join(', ');
-            const coordColor = color === 'light' ? 'var(--board-dark)' : 'var(--board-light)';
+            const coordColor = color === 'light' ? inks.onLight : inks.onDark;
             return (
               <div role="gridcell" key={sq} className="contents">
                 <button

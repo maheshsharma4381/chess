@@ -207,6 +207,13 @@ export function InteractiveBoard({
     dispatch({ type: 'squareClicked', square });
   };
 
+  /** Returns keyboard focus to the board after the promotion dialog closes. */
+  const focusSquare = (square: string | undefined) => {
+    if (!square) return;
+    pointerFocus.current = false;
+    squareEls.current.get(square)?.focus();
+  };
+
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape' && state.selected) {
       e.preventDefault();
@@ -229,7 +236,8 @@ export function InteractiveBoard({
 
   const rect = gridRef.current?.getBoundingClientRect();
   const ghostSize = rect ? rect.width / 8 : 0;
-  const draggedPiece = drag?.active ? new Chess(state.fen).get(drag.from) : null;
+  // The virtual board, so a piece moved by an earlier premove can be dragged too.
+  const draggedPiece = drag?.active ? virtualBoard(state.fen, state.premoves).get(drag.from) : null;
   const pendingColor = state.pendingPromotion
     ? state.pendingPromotion.to[1] === '8'
       ? 'w'
@@ -281,6 +289,7 @@ export function InteractiveBoard({
       {ringVisible && focused && <FocusRing square={focused} orientation={orientation} />}
       {draggedPiece && drag && rect && (
         <img
+          data-testid="drag-ghost"
           aria-hidden
           alt=""
           src={pieceSrc(draggedPiece.color, draggedPiece.type)}
@@ -296,8 +305,14 @@ export function InteractiveBoard({
       {pendingColor && (
         <PromotionDialog
           color={pendingColor}
-          onChoose={(piece) => dispatch({ type: 'promotionChosen', piece })}
-          onCancel={() => dispatch({ type: 'promotionCancelled' })}
+          onChoose={(piece) => {
+            focusSquare(state.pendingPromotion?.to);
+            dispatch({ type: 'promotionChosen', piece });
+          }}
+          onCancel={() => {
+            focusSquare(state.pendingPromotion?.to);
+            dispatch({ type: 'promotionCancelled' });
+          }}
         />
       )}
     </div>

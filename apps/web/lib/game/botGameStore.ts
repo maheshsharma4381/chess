@@ -72,6 +72,8 @@ export interface BotGameState {
   resign(): void;
   retryEngine(): Promise<void>;
   setLang(lang: CoachLanguage): void;
+  /** Stops all engine work for this game (unmount, New game). */
+  dispose(): void;
 }
 
 export interface BotGameDeps {
@@ -107,6 +109,13 @@ export function createBotGame(deps: BotGameDeps): StoreApi<BotGameState> {
   const botColor: Side = deps.userColor === 'w' ? 'b' : 'w';
   let searchId = 0;
   let controller: AbortControllerLike | null = null;
+  let evalController: AbortControllerLike | null = null;
+  let disposed = false;
+  const newController = (): AbortControllerLike | null => {
+    const Ctor = (globalThis as { AbortController?: new () => AbortControllerLike })
+      .AbortController;
+    return Ctor ? new Ctor() : null;
+  };
   let lastMoodPly = -MOOD_COOLDOWN_PLIES;
   let saidOpening = false;
 
@@ -153,14 +162,19 @@ export function createBotGame(deps: BotGameDeps): StoreApi<BotGameState> {
       searchId++;
       controller?.abort();
       controller = null;
+      evalController?.abort();
+      evalController = null;
     };
 
     const updateEvaluation = async () => {
-      if (get().mode !== 'friendly' || get().status !== 'playing') return;
+      if (disposed || get().mode !== 'friendly' || get().status !== 'playing') return;
       const fen = game.fen();
+      evalController?.abort();
+      evalController = newController();
+      const signal = evalController?.signal;
       try {
         const engine = await deps.getEngine();
-        const [best] = await engine.analyse(fen, { depth: EVAL_DEPTH, multiPv: 1 });
+        const [best] = await engine.analyse(fen, { depth: EVAL_DEPTH, multiPv: 1, signal });
         if (!best || game.fen() !== fen) return;
         const whiteToMove = fen.split(' ')[1] === 'w';
         const score = whiteToMove
@@ -175,11 +189,13 @@ export function createBotGame(deps: BotGameDeps): StoreApi<BotGameState> {
     };
 
     const botTurn = async () => {
-      if (get().status !== 'playing' || game.turn() !== botColor) return;
+      if (disposed || get().status !== 'playing' || game.turn() !== botColor) return;
+      // A queued eval would make the bot wait; the bar refreshes after the reply anyway.
+      evalController?.abort();
+      evalController = null;
       const id = ++searchId;
-      const Ctor = (globalThis as { AbortController?: new () => AbortControllerLike })
-        .AbortController;
-      controller = Ctor ? new Ctor() : null;
+      controller?.abort();
+      controller = newController();
       set({ thinking: true, engineError: null });
       const fen = game.fen();
       try {
@@ -265,7 +281,8 @@ export function createBotGame(deps: BotGameDeps): StoreApi<BotGameState> {
 
       takeback() {
         const s = get();
-        if (s.mode !== 'friendly' || s.status !== 'playing') return false;
+        // Friendly mode promises unlimited takebacks, including out of a finished game.
+        if (disposed || s.mode !== 'friendly' || game.history().length === 0) return false;
         cancelSearch();
         // Undo until one of the user's own moves has been removed and it is their turn.
         let removedUserMove = false;
@@ -273,7 +290,7 @@ export function createBotGame(deps: BotGameDeps): StoreApi<BotGameState> {
           const undone = game.undo();
           if (undone?.color === s.userColor) removedUserMove = true;
         }
-        sync({ thinking: false, hint: null, engineError: null });
+        sync({ thinking: false, hint: null, engineError: null, status: 'playing', result: null });
         if (game.turn() !== s.userColor) void botTurn();
         else void updateEvaluation();
         return removedUserMove;
@@ -315,6 +332,12 @@ export function createBotGame(deps: BotGameDeps): StoreApi<BotGameState> {
 
       setLang(lang) {
         set({ lang });
+      },
+
+      dispose() {
+        disposed = true;
+        cancelSearch();
+        set({ thinking: false });
       },
     };
   });

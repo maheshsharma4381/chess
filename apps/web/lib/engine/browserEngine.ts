@@ -80,6 +80,8 @@ export function createEngineStore(deps: EngineStoreDeps = {}): StoreApi<EngineSt
         return pending;
       },
       retry: () => {
+        // A start already in flight is the retry; don't spawn a second worker beside it.
+        if (pending && get().status === 'loading') return pending;
         current?.quit();
         liveTransport?.terminate();
         liveTransport = null;

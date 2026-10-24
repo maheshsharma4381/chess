@@ -58,6 +58,17 @@ export function PromotionDialog({
             <img src={pieceSrc(color, piece)} alt="" className="size-full" />
           </button>
         ))}
+        {/* Touch users have no Escape key. */}
+        <button
+          ref={(el) => {
+            buttons.current[CHOICES.length] = el;
+          }}
+          type="button"
+          onClick={onCancel}
+          className="min-h-16 cursor-pointer rounded-(--radius-control) px-3 text-sm font-medium text-text-muted transition-colors duration-(--duration-base) hover:bg-surface-raised hover:text-text"
+        >
+          Cancel
+        </button>
       </div>
     </div>
   );
