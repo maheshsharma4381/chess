@@ -37,7 +37,7 @@ export interface ExportMenuProps {
   download?: (blob: Blob, name: string) => void;
 }
 
-const TOAST_MS = 2500;
+const TOAST_MS = 4000;
 
 /** Copy PGN, copy FEN, download an animated GIF (spec 5.5 export). */
 export function ExportMenu({

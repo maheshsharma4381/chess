@@ -40,10 +40,16 @@ export function MoveList({ sans, currentPly, classifications = [], onSelectPly }
   return (
     <table className="w-full table-fixed text-sm">
       <caption className="sr-only">Moves</caption>
+      {/* table-fixed takes column widths from here; the move number column stays narrow. */}
+      <colgroup>
+        <col className="w-10" />
+        <col />
+        <col />
+      </colgroup>
       <tbody>
         {pairs.map((i) => (
           <tr key={i}>
-            <td className="tabular w-10 pr-1 text-right text-text-muted">{i + 1}.</td>
+            <td className="tabular pr-1 text-right text-text-muted">{i + 1}.</td>
             {cell(i * 2 + 1)}
             {cell(i * 2 + 2)}
           </tr>

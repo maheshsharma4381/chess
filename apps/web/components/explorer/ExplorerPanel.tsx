@@ -225,7 +225,7 @@ function MoveList({
     <div>
       <div
         aria-hidden
-        className="grid grid-cols-[4rem_3.5rem_1fr_2.75rem] gap-2 px-2 pb-1 text-xs text-text-muted"
+        className="grid grid-cols-[5.5rem_3.5rem_1fr_2.75rem] gap-2 px-2 pb-1 text-xs text-text-muted"
       >
         <span>Move</span>
         <span className="text-right">Games</span>
@@ -239,7 +239,7 @@ function MoveList({
               type="button"
               aria-label={rowLabel(m)}
               onClick={() => onPlayMove(m.uci)}
-              className="grid min-h-11 w-full cursor-pointer grid-cols-[4rem_3.5rem_1fr_2.75rem] items-center gap-2 rounded-(--radius-control) px-2 text-left text-sm hover:bg-surface-raised"
+              className="grid min-h-11 w-full cursor-pointer grid-cols-[5.5rem_3.5rem_1fr_2.75rem] items-center gap-2 rounded-(--radius-control) px-2 text-left text-sm hover:bg-surface-raised"
             >
               <span className="flex flex-col">
                 <span className="font-semibold">{m.san}</span>
@@ -248,8 +248,8 @@ function MoveList({
                     key={b}
                     className={
                       b === 'Main Line'
-                        ? 'w-fit rounded-[4px] bg-brand px-1 text-[10px] font-semibold leading-4 text-on-brand'
-                        : 'w-fit rounded-[4px] bg-accent px-1 text-[10px] font-semibold leading-4 text-on-accent'
+                        ? 'w-fit whitespace-nowrap rounded-[4px] bg-brand px-1 text-[10px] font-semibold leading-4 text-on-brand'
+                        : 'w-fit whitespace-nowrap rounded-[4px] bg-accent px-1 text-[10px] font-semibold leading-4 text-on-accent'
                     }
                   >
                     {b}
