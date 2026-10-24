@@ -29,6 +29,12 @@ export {
 export { detectMotifs, type MotifInput } from './coach/tacticalMotifDetector';
 export { explainMove, formatScore } from './coach/explain';
 export {
+  CHESS960_POSITIONS,
+  CHESS960_STANDARD_INDEX,
+  chess960StartFen,
+  randomChess960Index,
+} from './variants/chess960';
+export {
   estimateRating,
   expectedAccuracy,
   gameAccuracy,
