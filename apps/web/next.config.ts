@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 const config: NextConfig = {
   // Workspace packages ship TypeScript source.
-  transpilePackages: ['@chess/chess-core', '@chess/engine', '@chess/types'],
+  transpilePackages: ['@chess/bots', '@chess/chess-core', '@chess/engine', '@chess/types'],
   async headers() {
     return [
       {

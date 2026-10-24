@@ -62,6 +62,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@chess/bots':
+        specifier: workspace:*
+        version: link:../../packages/bots
       '@chess/chess-core':
         specifier: workspace:*
         version: link:../../packages/chess-core

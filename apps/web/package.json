@@ -15,6 +15,7 @@
     "test": "vitest run --testTimeout=20000"
   },
   "dependencies": {
+    "@chess/bots": "workspace:*",
     "@chess/chess-core": "workspace:*",
     "@chess/engine": "workspace:*",
     "@chess/types": "workspace:*",
