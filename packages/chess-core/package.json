@@ -3,8 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
+    "./book": "./src/book.ts",
     "./data/eco-book.json": "./src/data/eco-book.json"
   },
   "scripts": {

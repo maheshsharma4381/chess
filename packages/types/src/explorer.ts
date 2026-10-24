@@ -1,3 +1,5 @@
+import type { AbortSignalLike } from './abort';
+
 export type ExplorerSource = 'masters' | 'lichess';
 
 export type ExplorerSpeed =
@@ -5,6 +7,8 @@ export type ExplorerSpeed =
 
 export interface ExplorerQueryOptions {
   source: ExplorerSource;
+  /** Aborting rejects the query with an AbortError (e.g. the user left the page). */
+  signal?: AbortSignalLike;
   /** Lichess DB only: rating brackets, e.g. [1600, 1800]. */
   ratings?: number[];
   /** Lichess DB only. */

@@ -1,4 +1,6 @@
+import { AbortError, throwIfAborted, timers } from '../abort';
 import type {
+  AbortSignalLike,
   CounterMove,
   ExplorerGame,
   ExplorerQueryOptions,
@@ -53,10 +55,16 @@ interface RawExplorer {
  * The slice of `fetch` this service uses. Declared here because chess-core compiles
  * without DOM or Node types; browser, React Native and Node fetch all satisfy it.
  */
-export type FetchLike = (
-  url: string,
-  init?: { headers?: Record<string, string> },
-) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
+export type FetchLike = {
+  // Method syntax keeps parameters bivariant, so the platform `fetch` (whose RequestInit
+  // wants a full DOM AbortSignal) is assignable even though we only pass an AbortSignalLike.
+  fetch(
+    url: string,
+    init?: { headers?: Record<string, string>; signal?: AbortSignalLike },
+  ): Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
+}['fetch'];
+
+type FetchResponse = Awaited<ReturnType<FetchLike>>;
 
 export interface ExplorerServiceOptions {
   fetchFn?: FetchLike;
@@ -64,7 +72,17 @@ export interface ExplorerServiceOptions {
   baseUrl?: string;
   /** Lichess personal API token; the explorer rejects anonymous requests with 401. */
   token?: string;
+  /** Default 10s. A slow explorer must not leave the panel spinning forever. */
+  timeoutMs?: number;
 }
+
+export const EXPLORER_TIMEOUT_MS = 10_000;
+
+type AbortControllerLike = { signal: AbortSignalLike; abort(): void };
+const newAbortController = (): AbortControllerLike | null => {
+  const Ctor = (globalThis as { AbortController?: new () => AbortControllerLike }).AbortController;
+  return Ctor ? new Ctor() : null;
+};
 
 const pct = (n: number, total: number) => (total === 0 ? 0 : (n / total) * 100);
 
@@ -97,8 +115,10 @@ export class OpeningExplorerService {
   private readonly fetchFn: FetchLike;
   private readonly baseUrl: string;
   private readonly token: string | undefined;
+  private readonly timeoutMs: number;
 
   constructor(options: ExplorerServiceOptions = {}) {
+    this.timeoutMs = options.timeoutMs ?? EXPLORER_TIMEOUT_MS;
     const globalFetch = (globalThis as { fetch?: FetchLike }).fetch;
     const fetchFn = options.fetchFn ?? globalFetch?.bind(globalThis);
     if (!fetchFn) throw new Error('OpeningExplorerService needs fetchFn when fetch is unavailable');
@@ -108,7 +128,7 @@ export class OpeningExplorerService {
   }
 
   async query(fen: string, options: ExplorerQueryOptions): Promise<ExplorerResponse> {
-    const raw = await this.fetchRaw(this.buildUrl(fen, options));
+    const raw = await this.fetchRaw(this.buildUrl(fen, options), options.signal);
     const whiteToMove = fen.trim().split(/\s+/)[1] !== 'b';
     return {
       opening: raw.opening ?? null,
@@ -127,17 +147,50 @@ export class OpeningExplorerService {
     return url;
   }
 
-  private async fetchRaw(url: string): Promise<RawExplorer> {
-    let res: Awaited<ReturnType<FetchLike>>;
-    try {
-      const headers: Record<string, string> = {};
-      if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
-      res = await this.fetchFn(url, { headers });
-    } catch (err) {
-      throw new ExplorerError(`Opening explorer unreachable: ${(err as Error).message}`, null, {
-        cause: err,
-      });
-    }
+  /** One request with the caller's abort signal and this service's timeout. */
+  private send(url: string, signal: AbortSignalLike | undefined): Promise<FetchResponse> {
+    throwIfAborted(signal);
+    const headers: Record<string, string> = {};
+    if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+    const controller = newAbortController();
+
+    return new Promise<FetchResponse>((resolve, reject) => {
+      const cleanup = () => {
+        timers.clear(timer);
+        signal?.removeEventListener('abort', onAbort);
+      };
+      const onAbort = () => {
+        cleanup();
+        controller?.abort();
+        reject(new AbortError());
+      };
+      const timer = timers.set(() => {
+        cleanup();
+        controller?.abort();
+        reject(new ExplorerError(`Opening explorer timed out after ${this.timeoutMs}ms`, null));
+      }, this.timeoutMs);
+      signal?.addEventListener('abort', onAbort);
+
+      this.fetchFn(url, controller ? { headers, signal: controller.signal } : { headers }).then(
+        (res) => {
+          cleanup();
+          resolve(res);
+        },
+        (err: unknown) => {
+          cleanup();
+          // A no-op if the abort or timeout above already settled the promise.
+          reject(
+            new ExplorerError(`Opening explorer unreachable: ${(err as Error).message}`, null, {
+              cause: err,
+            }),
+          );
+        },
+      );
+    });
+  }
+
+  private async fetchRaw(url: string, signal: AbortSignalLike | undefined): Promise<RawExplorer> {
+    const res = await this.send(url, signal);
 
     if (res.status === 401) {
       throw new ExplorerError('Opening explorer requires a Lichess API token (HTTP 401)', 401);

@@ -1,6 +1,7 @@
 import { Chess, type Move } from 'chess.js';
 import {
   MOVE_CLASSIFICATIONS,
+  type AbortSignalLike,
   type BookOpening,
   type Color,
   type EngineLine,
@@ -12,6 +13,7 @@ import {
   type ReviewReport,
   type Score,
 } from '@chess/types';
+import { throwIfAborted, timers } from '../abort';
 import { isSacrifice } from '../board/material';
 import { detectMotifs } from '../coach/tacticalMotifDetector';
 import type { OpeningLookupService } from '../opening/OpeningLookupService';
@@ -28,8 +30,14 @@ import {
 
 /** Any UCI engine (Stockfish WASM worker, native process, remote service). */
 export interface EngineAdapter {
-  /** Lines best first. Scores are from the SIDE TO MOVE's point of view, as UCI reports them. */
-  analyse(fen: string, opts: { depth: number; multiPv: number }): Promise<EngineLine[]>;
+  /**
+   * Lines best first. Scores are from the SIDE TO MOVE's point of view, as UCI reports them.
+   * Must return at least one line for a position with legal moves.
+   */
+  analyse(
+    fen: string,
+    opts: { depth: number; multiPv: number; signal?: AbortSignalLike },
+  ): Promise<EngineLine[]>;
 }
 
 export type GameInput = { pgn: string } | { sans: string[]; startFen?: string };
@@ -43,6 +51,8 @@ export interface AnalyzeOptions {
   baseElo?: Partial<Record<Color, number>>;
   /** Called after each position: done goes 1..total, total = plies + 1. */
   onProgress?: (done: number, total: number) => void;
+  /** Aborting stops engine work and rejects with AbortError. */
+  signal?: AbortSignalLike;
 }
 
 const PV_SAN_LENGTH = 6;
@@ -51,33 +61,35 @@ export const MIN_MOVES_FOR_RATING = 8;
 
 /**
  * Lets the browser render, React Native handle gestures, or a Node server serve sockets
- * between plies; the per-move work is tens of milliseconds each. chess-core has no
- * DOM/Node types, so setTimeout is looked up structurally.
+ * between plies; the per-move work is tens of milliseconds each.
  */
 const yieldToEventLoop = () =>
   new Promise<void>((resolve) => {
-    const timer = (globalThis as { setTimeout?: (cb: () => void, ms: number) => unknown })
-      .setTimeout;
-    if (timer) timer(resolve, 0);
-    else resolve();
+    if (timers.set(resolve, 0) === undefined) resolve();
   });
 const RESULT = /^(1-0|0-1|1\/2-1\/2|\*)$/;
 
-/** Extracts the start FEN and mainline SAN moves (headers, comments, variations and NAGs removed). */
+/**
+ * Extracts the start FEN and mainline SAN moves of the first game: header lines, comments,
+ * variations and NAGs are removed, and parsing stops at the first result token.
+ */
 export function parsePgn(pgn: string): { startFen?: string; sans: string[] } {
-  const startFen = /\[FEN\s+"([^"]+)"\]/.exec(pgn)?.[1];
+  const startFen = /^\s*\[FEN\s+"([^"]+)"\]\s*$/m.exec(pgn)?.[1];
   let text = pgn
-    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/^\s*\[.*\]\s*$/gm, ' ')
     .replace(/\{[^}]*\}/g, ' ')
     .replace(/;[^\n]*/g, ' ');
   for (let prev = ''; prev !== text;) {
     prev = text;
     text = text.replace(/\([^()]*\)/g, ' ');
   }
-  const sans = text
-    .split(/\s+/)
-    .map((t) => t.replace(/^\d+\.+/, '').replace(/[!?]+$/, ''))
-    .filter((t) => t && !RESULT.test(t) && !/^\$\d+$/.test(t));
+
+  const sans: string[] = [];
+  for (const raw of text.split(/\s+/)) {
+    const token = raw.replace(/^\d+\.+/, '').replace(/[!?]+$/, '');
+    if (RESULT.test(token)) break;
+    if (token && !/^\$\d+$/.test(token)) sans.push(token);
+  }
   return startFen ? { startFen, sans } : { sans };
 }
 
@@ -149,7 +161,8 @@ export async function analyzeGame(
   deps: { engine: EngineAdapter; book: OpeningLookupService },
   options: AnalyzeOptions = {},
 ): Promise<ReviewReport> {
-  const { depth = 18, multiPv = 3, baseElo = {}, onProgress } = options;
+  const { depth = 18, multiPv = 3, baseElo = {}, onProgress, signal } = options;
+  throwIfAborted(signal);
   const parsed = 'pgn' in input ? parsePgn(input.pgn) : input;
   const { start, moves } = replay(parsed.startFen, parsed.sans);
   const fens = [start, ...moves.map((m) => m.after)];
@@ -163,11 +176,15 @@ export async function analyzeGame(
       lines.push([]);
       scores.push(terminal);
     } else {
+      throwIfAborted(signal);
       const whiteToMove = fen.split(' ')[1] === 'w';
-      const raw = await deps.engine.analyse(fen, { depth, multiPv });
+      const raw = await deps.engine.analyse(fen, { depth, multiPv, signal });
+      throwIfAborted(signal);
       const converted = raw.map((l) => ({ ...l, score: toWhitePov(l.score, whiteToMove) }));
+      const best = converted[0];
+      if (!best) throw new Error(`Engine returned no lines for a live position: ${fen}`);
       lines.push(converted);
-      scores.push(converted[0]?.score ?? { cp: 0 });
+      scores.push(best.score);
     }
     onProgress?.(i + 1, fens.length);
   }
@@ -180,6 +197,7 @@ export async function analyzeGame(
   let named: OpeningEntry | null = null;
   for (const [i, move] of moves.entries()) {
     await yieldToEventLoop();
+    throwIfAborted(signal);
     const ply = i + 1;
     const color: Color = move.color === 'w' ? 'white' : 'black';
     const fenBefore = fens[i] as string;

@@ -66,6 +66,17 @@ const CHECKMATE: Copy = { en: 'Checkmate!', hinglish: 'Checkmate kar diya!' };
 
 const d = (m: Motif, key: string) => String(m.detail[key] ?? '');
 
+/** "king, rook and bishop" / "king, rook aur bishop" from the motif's targetList. */
+function targetNames(m: Motif, lang: CoachLanguage): string {
+  const list = d(m, 'targetList');
+  if (!list) return d(m, 'targets');
+  const names = list.split(',');
+  const and = lang === 'en' ? 'and' : 'aur';
+  return names.length <= 1
+    ? (names[0] ?? '')
+    : `${names.slice(0, -1).join(', ')} ${and} ${names.at(-1)}`;
+}
+
 /** One sentence per motif, or null when the motif doesn't fit (e.g. a "good" pawn note on a bad move). */
 function sentence(m: Motif, lang: CoachLanguage, positive: boolean): string | null {
   const sq = m.squares[0] ?? '';
@@ -78,7 +89,7 @@ function sentence(m: Motif, lang: CoachLanguage, positive: boolean): string | nu
         : 'Aapne material ka sacrifice kiya, aur engine ke hisaab se ye bilkul sahi hai.';
     case 'fork': {
       const piece = d(m, 'piece');
-      const targets = d(m, 'targets');
+      const targets = targetNames(m, lang);
       if (source === 'reply') {
         return en
           ? `This allows a ${piece} fork on ${sq} against your ${targets}.`
@@ -139,8 +150,8 @@ function sentence(m: Motif, lang: CoachLanguage, positive: boolean): string | nu
         : `Ye book theory hai: ${d(m, 'eco')} ${d(m, 'name')}.`;
     case 'book-deviation':
       return en
-        ? `This leaves opening theory (${d(m, 'eco')} ${d(m, 'name')}); the main line continues ${d(m, 'bestBookSan')}.`
-        : `Yahan se aap opening theory (${d(m, 'eco')} ${d(m, 'name')}) se bahar gaye; main line ${d(m, 'bestBookSan')} hai.`;
+        ? `This leaves opening theory (${d(m, 'eco')} ${d(m, 'name')}); theory continues ${d(m, 'bestBookSan')}.`
+        : `Yahan se aap opening theory (${d(m, 'eco')} ${d(m, 'name')}) se bahar gaye; theory mein agla move ${d(m, 'bestBookSan')} hai.`;
     case 'king-safety': {
       const side = d(m, 'castled');
       return en
@@ -206,13 +217,21 @@ const PRIORITY_BAD: MotifType[] = [
   'pawn-structure',
 ];
 const MAX_MOTIF_SENTENCES = 2;
+const OWN_TACTICS = new Set<MotifType>([
+  'fork',
+  'pin',
+  'skewer',
+  'discovered-check',
+  'discovered-attack',
+]);
 
 function pickMotifs(motifs: Motif[], positive: boolean): Motif[] {
   const order = positive ? PRIORITY_GOOD : PRIORITY_BAD;
   // Good moves talk about what the move did, not what the opponent could do or what was missed.
+  // Bad moves explain what went wrong, so the mover's own tactics are not "the reason".
   const relevant = positive
     ? motifs.filter((m) => d(m, 'source') !== 'reply' && d(m, 'source') !== 'best')
-    : motifs;
+    : motifs.filter((m) => !(OWN_TACTICS.has(m.type) && d(m, 'source') === 'played'));
   return relevant
     .filter((m) => order.includes(m.type))
     .sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));

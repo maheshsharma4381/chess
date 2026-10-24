@@ -85,7 +85,13 @@ function forkBy(position: Chess, square: Square, source: Source): Motif | null {
   return {
     type: 'fork',
     squares: [square, ...targets],
-    detail: { piece: PIECE_NAME[attacker.type], targets: joinNames(names), source },
+    detail: {
+      piece: PIECE_NAME[attacker.type],
+      targets: joinNames(names),
+      // Comma-separated so each language can join the names itself ("and" / "aur").
+      targetList: names.join(','),
+      source,
+    },
   };
 }
 
@@ -127,6 +133,8 @@ function discoveries(before: Board, after: Board, move: Move): Motif[] {
   const out: Motif[] = [];
   for (const slider of piecesOf(after, move.color)) {
     if (slider.square === move.to || slidingDirections(slider.type).length === 0) continue;
+    // A piece that just arrived (the castling rook) attacks; it didn't "discover" anything.
+    if (!pieceAt(before, slider.square)) continue;
     const had = new Set(attacksFrom(before, slider.square));
     for (const sq of attacksFrom(after, slider.square)) {
       if (had.has(sq)) continue;
@@ -200,6 +208,12 @@ function pawnIssues(board: Board, color: ChessColor) {
       });
     }).length;
   return { doubled, isolated, passed };
+}
+
+/** Ply of the move about to be played, from the FEN's fullmove number (games may start mid-way). */
+function gamePly(fen: string): number {
+  const [, turn, , , , fullmove] = fen.trim().split(/\s+/);
+  return (Math.max(1, Number(fullmove) || 1) - 1) * 2 + (turn === 'b' ? 2 : 1);
 }
 
 function positional(before: Board, after: Board, move: Move, ply: number): Motif[] {
@@ -306,6 +320,6 @@ export function detectMotifs(input: MotifInput): Motif[] {
     });
   }
 
-  motifs.push(...positional(before, after, move, input.ply));
+  motifs.push(...positional(before, after, move, Math.max(input.ply, gamePly(input.fenBefore))));
   return motifs;
 }
