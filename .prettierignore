@@ -7,3 +7,4 @@ coverage/
 .superpowers/
 **/.next/
 apps/web/public/engine/
+apps/web/next-env.d.ts

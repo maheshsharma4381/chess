@@ -19,7 +19,7 @@ export function CapturedPieces({ fen, side }: { fen: string; side: 'w' | 'b' }) 
 
   return (
     <div className="flex h-5 items-center gap-1 text-xs text-text-muted">
-      <span aria-label={label} className="flex items-center">
+      <span role="img" aria-label={label} className="flex items-center">
         {taken.map((t, i) => (
           <img
             key={i}

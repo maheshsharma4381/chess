@@ -1,6 +1,7 @@
 'use client';
 
 import { FlipVertical2, Flag, Lightbulb, RotateCcw, Undo2, Volume2, VolumeX } from 'lucide-react';
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { botById } from '@chess/bots';
@@ -25,6 +26,25 @@ const REASON: Record<string, string> = {
   resign: 'by resignation',
 };
 
+const MUTE_KEY = 'chess.muted';
+
+/** Per-browser convenience; storage can be unavailable (private mode), so never throw. */
+function readMuted(): boolean {
+  try {
+    return globalThis.localStorage?.getItem(MUTE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeMuted(muted: boolean): void {
+  try {
+    globalThis.localStorage?.setItem(MUTE_KEY, muted ? '1' : '0');
+  } catch {
+    // Not persisted; the toggle still works for this game.
+  }
+}
+
 export interface BotGameProps {
   botId: string;
   mode: BotMode;
@@ -36,10 +56,12 @@ export interface BotGameProps {
 export function BotGame({ botId, mode, color, engine }: BotGameProps) {
   const [gameKey, setGameKey] = useState(0);
   const sounds = useRef<SoundEngine | null>(null);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(readMuted);
   const [orientation, setOrientation] = useState<'white' | 'black'>(
     color === 'w' ? 'white' : 'black',
   );
+  // A new colour (navigation) resets the board to the user's side.
+  useEffect(() => setOrientation(color === 'w' ? 'white' : 'black'), [color]);
 
   const store = useMemo(() => {
     const bot = botById(botId);
@@ -54,7 +76,11 @@ export function BotGame({ botId, mode, color, engine }: BotGameProps) {
     // A new game (gameKey) rebuilds the store.
   }, [botId, color, mode, engine, gameKey]);
 
-  useEffect(() => store.getState().start(), [store]);
+  useEffect(() => {
+    store.getState().start();
+    // Leaving the page or starting a new game stops this game's engine work.
+    return () => store.getState().dispose();
+  }, [store]);
 
   const s = useStore(store);
   const fenHistory = useMemo(
@@ -123,6 +149,7 @@ export function BotGame({ botId, mode, color, engine }: BotGameProps) {
           {friendly && <EvalBar score={s.evaluation} orientation={orientation} />}
           <div className="flex-1">
             <InteractiveBoard
+              key={gameKey}
               fen={s.fen}
               movable={s.status === 'playing' ? s.userColor : 'none'}
               onMove={onMove}
@@ -190,14 +217,12 @@ export function BotGame({ botId, mode, color, engine }: BotGameProps) {
               >
                 <RotateCcw aria-hidden className="size-4" /> New game
               </button>
-              <button
-                type="button"
-                disabled
-                title="Game Review is coming in the next update"
-                className="min-h-11 rounded-(--radius-control) border border-border px-4 text-text-muted"
+              <Link
+                href={`/review?pgn=${encodeURIComponent(s.toPgn())}`}
+                className="inline-flex min-h-11 items-center rounded-(--radius-control) border border-border px-4 font-medium hover:bg-surface"
               >
-                Review (soon)
-              </button>
+                Game Review
+              </Link>
             </div>
           </div>
         )}
@@ -230,8 +255,10 @@ export function BotGame({ botId, mode, color, engine }: BotGameProps) {
           <ControlButton
             label={muted ? 'Unmute' : 'Mute'}
             onClick={() => {
-              setMuted((m) => !m);
-              if (sounds.current) sounds.current.muted = !muted;
+              const next = !muted;
+              setMuted(next);
+              writeMuted(next);
+              if (sounds.current) sounds.current.muted = next;
             }}
           >
             {muted ? (

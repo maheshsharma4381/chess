@@ -19,6 +19,9 @@ export const COLORS = {
   onDanger: '#FFFFFF',
 } as const;
 
+/** Book/opening accent (spec Book badge hue), lightened for text on panels. */
+export const ECO_TEXT = '#AE8E6B';
+
 export const MOTION = {
   ease: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
   fast: 150,

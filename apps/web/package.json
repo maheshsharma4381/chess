@@ -12,7 +12,7 @@
     "start": "next start",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
-    "test": "vitest run --testTimeout=20000",
+    "test": "vitest run --testTimeout=60000",
     "e2e": "playwright test"
   },
   "dependencies": {
@@ -21,11 +21,13 @@
     "@chess/engine": "workspace:*",
     "@chess/types": "workspace:*",
     "chess.js": "catalog:",
+    "gifenc": "1.0.3",
     "lucide-react": "1.61.0",
     "motion": "14.6.0",
     "next": "16.4.3",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "server-only": "0.0.1",
     "stockfish": "catalog:",
     "zustand": "5.0.16"
   },

@@ -3,6 +3,7 @@
 import { BookOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { OpeningLookupService } from '@chess/chess-core/book';
+import { ECO_TEXT } from '@/lib/design/tokens';
 
 export interface OpeningName {
   eco: string;
@@ -41,8 +42,10 @@ export function OpeningBanner({ opening }: { opening: OpeningName | null }) {
   if (!opening) return null;
   return (
     <p className="flex min-h-8 items-center gap-2 text-sm">
-      <BookOpen aria-hidden className="size-4 text-[#a88865]" />
-      <span className="tabular font-semibold text-[#a88865]">{opening.eco}</span>
+      <BookOpen aria-hidden className="size-4" style={{ color: ECO_TEXT }} />
+      <span className="tabular font-semibold" style={{ color: ECO_TEXT }}>
+        {opening.eco}
+      </span>
       <span className="truncate text-text-muted">{opening.name}</span>
     </p>
   );

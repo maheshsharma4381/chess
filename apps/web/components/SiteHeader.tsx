@@ -1,5 +1,12 @@
 import Link from 'next/link';
 
+const NAV = [
+  { href: '/play/bots', label: 'Play' },
+  { href: '/analysis', label: 'Analysis' },
+  { href: '/review', label: 'Review' },
+  { href: '/openings', label: 'Openings' },
+];
+
 export function SiteHeader() {
   return (
     <header className="border-b border-border bg-surface">
@@ -11,14 +18,16 @@ export function SiteHeader() {
           Chess<span className="text-brand">Platform</span>
         </Link>
         <ul className="flex items-center gap-1 text-sm font-medium">
-          <li>
-            <Link
-              href="/play/bots"
-              className="inline-flex min-h-11 items-center rounded-(--radius-control) px-3 text-text-muted transition-colors duration-(--duration-base) hover:bg-surface-raised hover:text-text"
-            >
-              Play
-            </Link>
-          </li>
+          {NAV.map(({ href, label }) => (
+            <li key={href}>
+              <Link
+                href={href}
+                className="inline-flex min-h-11 items-center rounded-(--radius-control) px-3 text-text-muted transition-colors duration-(--duration-base) hover:bg-surface-raised hover:text-text"
+              >
+                {label}
+              </Link>
+            </li>
+          ))}
         </ul>
       </nav>
     </header>
