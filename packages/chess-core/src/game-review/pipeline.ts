@@ -86,7 +86,8 @@ export function parsePgn(pgn: string): { startFen?: string; sans: string[] } {
 
   const sans: string[] = [];
   for (const raw of text.split(/\s+/)) {
-    const token = raw.replace(/^\d+\.+/, '').replace(/[!?]+$/, '');
+    // "1.", "12...Nf6", and the bare "..." chess.js writes in "1. ... e5" (Black moves first).
+    const token = raw.replace(/^\d*\.+/, '').replace(/[!?]+$/, '');
     if (RESULT.test(token)) break;
     if (token && !/^\$\d+$/.test(token)) sans.push(token);
   }

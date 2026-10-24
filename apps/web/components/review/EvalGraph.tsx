@@ -3,6 +3,7 @@
 import { useState, type MouseEvent, type PointerEvent } from 'react';
 import { CLASSIFICATION_META, type MoveClassification } from '@chess/types';
 import { ClassificationBadge } from '@/components/board/ClassificationBadge';
+import { fenStart } from '@/components/game/MoveList';
 import type { Orientation } from '@/lib/board/squares';
 
 /** Classifications worth a marker on the graph (the turning points). */
@@ -25,18 +26,23 @@ export interface EvalGraphProps {
   ply: number;
   orientation: Orientation;
   onPly: (ply: number) => void;
+  /** The game's start position, for move numbers when it is not the usual start. */
+  startFen?: string;
 }
 
 function describe(
   ply: number,
   winGraph: readonly number[],
   moves: EvalGraphProps['moves'],
+  startFen?: string,
 ): { title: string; detail: string; classification?: MoveClassification } {
   const win = Math.round(winGraph[ply] ?? 50);
   const move = moves[ply - 1];
   if (!move) return { title: 'Start', detail: `White ${win}%` };
-  const number = Math.ceil(ply / 2);
-  const title = `Move ${number}${ply % 2 === 1 ? '.' : '...'} ${move.san}`;
+  const start = fenStart(startFen);
+  const slot = ply - 1 + (start.blackFirst ? 1 : 0);
+  const number = start.number + Math.floor(slot / 2);
+  const title = `Move ${number}${slot % 2 === 0 ? '.' : '...'} ${move.san}`;
   return { title, detail: `White ${win}%`, classification: move.classification };
 }
 
@@ -45,7 +51,7 @@ function describe(
  * with badge markers on the turning points. Click or tap jumps there; ← → work anywhere
  * on the review page; a table carries the same data for screen readers.
  */
-export function EvalGraph({ winGraph, moves, ply, orientation, onPly }: EvalGraphProps) {
+export function EvalGraph({ winGraph, moves, ply, orientation, onPly, startFen }: EvalGraphProps) {
   const plies = moves.length;
   const [hover, setHover] = useState<number | null>(null);
 
@@ -55,12 +61,16 @@ export function EvalGraph({ winGraph, moves, ply, orientation, onPly }: EvalGrap
     return nearestPly(((e.clientX - rect.left) / rect.width) * 100, plies);
   };
 
-  const points = winGraph.map((w, i) => `${xOf(i, plies)},${yOf(w, orientation)}`).join(' ');
+  // A game with no moves has one point: stretch it across, or the area becomes a wedge.
+  const points =
+    plies === 0
+      ? `0,${yOf(winGraph[0] ?? 50, orientation)} 100,${yOf(winGraph[0] ?? 50, orientation)}`
+      : winGraph.map((w, i) => `${xOf(i, plies)},${yOf(w, orientation)}`).join(' ');
   const area = `0,100 ${points} 100,100`;
   const bottomFill = orientation === 'white' ? WHITE_FILL : BLACK_FILL;
   const topFill = orientation === 'white' ? BLACK_FILL : WHITE_FILL;
-  const current = describe(ply, winGraph, moves);
-  const tip = hover === null ? null : describe(hover, winGraph, moves);
+  const current = describe(ply, winGraph, moves, startFen);
+  const tip = hover === null ? null : describe(hover, winGraph, moves, startFen);
 
   return (
     <div>
@@ -164,7 +174,7 @@ export function EvalGraph({ winGraph, moves, ply, orientation, onPly }: EvalGrap
         </thead>
         <tbody>
           {moves.map((m, i) => {
-            const d = describe(i + 1, winGraph, moves);
+            const d = describe(i + 1, winGraph, moves, startFen);
             return (
               <tr key={i}>
                 <th scope="row">

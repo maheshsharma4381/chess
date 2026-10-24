@@ -123,7 +123,10 @@ export function ExplorerPanel({ fen, onPlayMove, service }: ExplorerPanelProps) 
       {explorer.status === 'loading' && <Skeleton />}
 
       {explorer.status === 'error' && (
-        <div className="space-y-2 rounded-(--radius-control) bg-surface-raised p-3 text-sm">
+        <div
+          role="alert"
+          className="space-y-2 rounded-(--radius-control) bg-surface-raised p-3 text-sm"
+        >
           <p className="font-semibold">Explorer unavailable</p>
           <p className="text-text-muted">{explorer.message}</p>
           <button

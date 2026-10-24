@@ -2,6 +2,7 @@
 
 import { FlipVertical2, Lightbulb, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useStore } from 'zustand';
 import type { EngineAdapter } from '@chess/chess-core';
 import type { CoachLanguage } from '@chess/types';
@@ -20,6 +21,23 @@ import { ReviewSummary } from './ReviewSummary';
 
 const header = (pgn: string, tag: string) =>
   new RegExp(`^\\s*\\[${tag}\\s+"([^"]*)"\\]`, 'm').exec(pgn)?.[1];
+
+const LANG_KEY = 'chess.coachLang';
+const readLang = (): CoachLanguage | null => {
+  try {
+    const v = localStorage.getItem(LANG_KEY);
+    return v === 'en' || v === 'hinglish' ? v : null;
+  } catch {
+    return null;
+  }
+};
+const writeLang = (lang: CoachLanguage) => {
+  try {
+    localStorage.setItem(LANG_KEY, lang);
+  } catch {
+    // Private mode or blocked storage: the choice lasts for this page only.
+  }
+};
 
 const loadBook = () =>
   import('@chess/chess-core/book').then(
@@ -47,7 +65,16 @@ export function GameReview({ pgn, depth = QUICK_DEPTH, engine }: GameReviewProps
   const [orientation, setOrientation] = useState<'white' | 'black'>(
     names.black === 'You' ? 'black' : 'white',
   );
-  const [lang, setLang] = useState<CoachLanguage>('en');
+  const [lang, setLangState] = useState<CoachLanguage>('en');
+  // Read after mount so the server render and the first client render agree.
+  useEffect(() => {
+    const saved = readLang();
+    if (saved) setLangState(saved);
+  }, []);
+  const setLang = useCallback((next: CoachLanguage) => {
+    setLangState(next);
+    writeLang(next);
+  }, []);
   const preview = useLinePreview();
   const retry = useRetry();
 
@@ -68,6 +95,12 @@ export function GameReview({ pgn, depth = QUICK_DEPTH, engine }: GameReviewProps
     },
     [store, stopPreview, exitRetry],
   );
+  // A new run (deeper, or again after a cancel) also leaves Show Moves / Retry first.
+  const rerun = (runDepth: number) => {
+    stopPreview();
+    exitRetry();
+    void store.getState().run(pgn, { depth: runDepth });
+  };
 
   if (s.status === 'error') {
     return (
@@ -75,6 +108,12 @@ export function GameReview({ pgn, depth = QUICK_DEPTH, engine }: GameReviewProps
         <p role="alert" className="rounded-(--radius-control) border border-danger p-3">
           This game could not be reviewed: {s.error}
         </p>
+        <Link
+          href="/review"
+          className="mt-3 inline-flex min-h-11 items-center rounded-(--radius-control) border border-border px-4 font-medium hover:bg-surface-raised"
+        >
+          Paste another game
+        </Link>
       </main>
     );
   }
@@ -90,7 +129,7 @@ export function GameReview({ pgn, depth = QUICK_DEPTH, engine }: GameReviewProps
             <p className="text-text-muted">Review cancelled.</p>
             <button
               type="button"
-              onClick={() => void s.run(pgn, { depth })}
+              onClick={() => rerun(depth)}
               className="min-h-11 cursor-pointer rounded-(--radius-control) bg-brand px-4 font-semibold text-on-brand hover:bg-brand-hover"
             >
               Start again
@@ -134,6 +173,7 @@ export function GameReview({ pgn, depth = QUICK_DEPTH, engine }: GameReviewProps
   const move = ply > 0 ? (report.moves[ply - 1] ?? null) : null;
   const score = move?.scoreAfter ?? report.moves[0]?.scoreBefore ?? { cp: 0 };
   const r = retry.state;
+  const deepPct = s.progress.total ? Math.round((s.progress.done / s.progress.total) * 100) : 0;
 
   return (
     <main className="mx-auto grid max-w-6xl gap-4 px-4 py-4 lg:grid-cols-[minmax(0,38rem)_1fr]">
@@ -166,6 +206,7 @@ export function GameReview({ pgn, depth = QUICK_DEPTH, engine }: GameReviewProps
           ply={ply}
           orientation={orientation}
           onPly={goTo}
+          startFen={report.startFen}
         />
       </section>
 
@@ -233,6 +274,7 @@ export function GameReview({ pgn, depth = QUICK_DEPTH, engine }: GameReviewProps
             classifications={report.moves.map((m) => m.classification)}
             currentPly={ply}
             onSelectPly={goTo}
+            startFen={report.startFen}
           />
         </div>
 
@@ -244,16 +286,41 @@ export function GameReview({ pgn, depth = QUICK_DEPTH, engine }: GameReviewProps
           >
             <FlipVertical2 aria-hidden className="size-4" /> Flip board
           </button>
-          {s.depth < DEEP_DEPTH && (
+          {s.status === 'done' && s.depth < DEEP_DEPTH && (
             <button
               type="button"
-              onClick={() => void s.run(pgn, { depth: DEEP_DEPTH })}
+              onClick={() => rerun(DEEP_DEPTH)}
               className="min-h-11 cursor-pointer rounded-(--radius-control) border border-border bg-surface-raised px-3 text-sm hover:bg-border"
             >
               Deeper review (depth {DEEP_DEPTH})
             </button>
           )}
         </div>
+
+        {s.status === 'running' && (
+          <div className="flex items-center gap-3 text-sm">
+            <div
+              role="progressbar"
+              aria-label={`Deeper review at depth ${s.depth}`}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={deepPct}
+              className="h-2 flex-1 overflow-hidden rounded-full bg-surface-raised"
+            >
+              <div className="h-full bg-brand" style={{ width: `${deepPct}%` }} />
+            </div>
+            <span className="tabular text-text-muted">
+              Depth {s.depth}: {deepPct}%
+            </span>
+            <button
+              type="button"
+              onClick={() => s.cancel()}
+              className="min-h-11 cursor-pointer rounded-(--radius-control) border border-border px-3 hover:bg-surface-raised"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
 
         <ExportMenu
           pgn={pgn}

@@ -7,13 +7,37 @@ export interface MoveListProps {
   currentPly: number;
   classifications?: ReadonlyArray<MoveClassification | undefined>;
   onSelectPly?: (ply: number) => void;
+  /** Where the game started: its side to move and move number set the numbering. */
+  startFen?: string;
+}
+
+/** Move number and side to move of a FEN (defaults: move 1, White). */
+export function fenStart(fen?: string): { number: number; blackFirst: boolean } {
+  const [, turn = 'w', , , , full = '1'] = (fen ?? '').trim().split(/\s+/);
+  return { number: Math.max(1, Number(full) || 1), blackFirst: turn === 'b' };
 }
 
 /** Move pairs ("1. e4 e5"); each move is a button that jumps the board to that ply. */
-export function MoveList({ sans, currentPly, classifications = [], onSelectPly }: MoveListProps) {
-  const pairs = Array.from({ length: Math.ceil(sans.length / 2) }, (_, i) => i);
+export function MoveList({
+  sans,
+  currentPly,
+  classifications = [],
+  onSelectPly,
+  startFen,
+}: MoveListProps) {
+  const start = fenStart(startFen);
+  // When Black moves first, White's half of the first row is an empty "…" cell.
+  const offset = start.blackFirst ? 1 : 0;
+  const pairs = Array.from({ length: Math.ceil((sans.length + offset) / 2) }, (_, i) => i);
 
   const cell = (ply: number) => {
+    if (ply < 1) {
+      return (
+        <td aria-hidden className="px-2 text-text-muted">
+          …
+        </td>
+      );
+    }
     const san = sans[ply - 1];
     if (!san) return <td />;
     const cls = classifications[ply - 1];
@@ -49,9 +73,9 @@ export function MoveList({ sans, currentPly, classifications = [], onSelectPly }
       <tbody>
         {pairs.map((i) => (
           <tr key={i}>
-            <td className="tabular pr-1 text-right text-text-muted">{i + 1}.</td>
-            {cell(i * 2 + 1)}
-            {cell(i * 2 + 2)}
+            <td className="tabular pr-1 text-right text-text-muted">{start.number + i}.</td>
+            {cell(i * 2 + 1 - offset)}
+            {cell(i * 2 + 2 - offset)}
           </tr>
         ))}
       </tbody>

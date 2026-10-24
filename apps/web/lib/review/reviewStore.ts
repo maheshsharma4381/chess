@@ -34,62 +34,73 @@ type AbortControllerLike = { signal: AbortSignalLike; abort(): void };
 export function createReviewStore(deps: ReviewDeps): StoreApi<ReviewState> {
   let runId = 0;
   let controller: AbortControllerLike | null = null;
+  /** The finished report's game and depth: a deeper run keeps it on screen until it ends. */
+  let shown: { pgn: string; depth: number } | null = null;
 
-  return createStore<ReviewState>()((set, get) => ({
-    status: 'idle',
-    progress: { done: 0, total: 0 },
-    report: null,
-    error: null,
-    ply: 0,
-    depth: QUICK_DEPTH,
+  return createStore<ReviewState>()((set, get) => {
+    // A cancelled deeper run falls back to the report already on screen.
+    const settleCancelled = () =>
+      set(get().report && shown ? { status: 'done', depth: shown.depth } : { status: 'idle' });
 
-    async run(pgn, opts = {}) {
-      get().cancel();
-      const id = ++runId;
-      const Ctor = (globalThis as { AbortController?: new () => AbortControllerLike })
-        .AbortController;
-      controller = Ctor ? new Ctor() : null;
-      const depth = opts.depth ?? QUICK_DEPTH;
-      set({
-        status: 'running',
-        progress: { done: 0, total: 0 },
-        error: null,
-        depth,
-        report: null,
-        ply: 0,
-      });
-      try {
-        const [book, engine] = await Promise.all([deps.loadBook(), deps.getEngine()]);
-        const report = await analyzeGame(
-          { pgn },
-          { engine, book },
-          {
-            depth,
-            multiPv: 3,
-            signal: controller?.signal,
-            onProgress: (done, total) => {
-              if (id === runId) set({ progress: { done, total } });
+    return {
+      status: 'idle',
+      progress: { done: 0, total: 0 },
+      report: null,
+      error: null,
+      ply: 0,
+      depth: QUICK_DEPTH,
+
+      async run(pgn, opts = {}) {
+        get().cancel();
+        const id = ++runId;
+        const Ctor = (globalThis as { AbortController?: new () => AbortControllerLike })
+          .AbortController;
+        controller = Ctor ? new Ctor() : null;
+        const depth = opts.depth ?? QUICK_DEPTH;
+        const keep = shown?.pgn === pgn && get().report !== null;
+        if (!keep) shown = null;
+        set({
+          status: 'running',
+          progress: { done: 0, total: 0 },
+          error: null,
+          depth,
+          ...(keep ? {} : { report: null, ply: 0 }),
+        });
+        try {
+          const [book, engine] = await Promise.all([deps.loadBook(), deps.getEngine()]);
+          const report = await analyzeGame(
+            { pgn },
+            { engine, book },
+            {
+              depth,
+              multiPv: 3,
+              signal: controller?.signal,
+              onProgress: (done, total) => {
+                if (id === runId) set({ progress: { done, total } });
+              },
             },
-          },
-        );
-        if (id === runId) set({ status: 'done', report });
-      } catch (err) {
-        if (id !== runId) return;
-        if ((err as Error).name === 'AbortError') set({ status: 'idle' });
-        else set({ status: 'error', error: (err as Error).message });
-      }
-    },
+          );
+          if (id !== runId) return;
+          shown = { pgn, depth };
+          set({ status: 'done', report, ply: Math.min(get().ply, report.moves.length) });
+        } catch (err) {
+          if (id !== runId) return;
+          if ((err as Error).name === 'AbortError') settleCancelled();
+          else set({ status: 'error', error: (err as Error).message });
+        }
+      },
 
-    cancel() {
-      if (get().status !== 'running') return;
-      controller?.abort();
-      controller = null;
-      set({ status: 'idle' });
-    },
+      cancel() {
+        if (get().status !== 'running') return;
+        controller?.abort();
+        controller = null;
+        settleCancelled();
+      },
 
-    setPly(ply) {
-      const max = get().report?.moves.length ?? 0;
-      set({ ply: Math.max(0, Math.min(max, Math.round(ply))) });
-    },
-  }));
+      setPly(ply) {
+        const max = get().report?.moves.length ?? 0;
+        set({ ply: Math.max(0, Math.min(max, Math.round(ply))) });
+      },
+    };
+  });
 }

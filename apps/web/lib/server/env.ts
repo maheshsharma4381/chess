@@ -1,3 +1,4 @@
+import 'server-only';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -5,7 +6,7 @@ import { resolve } from 'node:path';
  * Server-only secrets. Next loads `.env` from apps/web, but this monorepo keeps secrets in the
  * repo-root `.env`, and @next/env caches its first load, so a second loadEnvConfig() is a
  * no-op. Route handlers ask for a secret here instead: process env first, then the files.
- * Never import this from client code.
+ * The server-only import makes a client import a build error.
  */
 
 /** A KEY=value from a dotenv file (quotes stripped, comments ignored), or undefined. */
@@ -21,10 +22,11 @@ export function readEnvValue(file: string, key: string): string | undefined {
     if (!line || line.startsWith('#')) continue;
     const eq = line.indexOf('=');
     if (eq < 0 || line.slice(0, eq).trim() !== key) continue;
-    return line
-      .slice(eq + 1)
-      .trim()
-      .replace(/^(['"])(.*)\1$/, '$2');
+    const value = line.slice(eq + 1).trim();
+    const quoted = /^(['"])(.*?)\1(\s+#.*)?$/.exec(value);
+    if (quoted) return quoted[2];
+    // Unquoted: " # note" starts a comment; a # inside the value (a#b) is kept.
+    return value.replace(/\s+#.*$/, '');
   }
   return undefined;
 }

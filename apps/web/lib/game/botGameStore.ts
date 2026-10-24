@@ -255,6 +255,9 @@ export function createBotGame(deps: BotGameDeps): StoreApi<BotGameState> {
       hint: null,
 
       start() {
+        // StrictMode (dev) runs mount → cleanup → mount on the same store: a later start
+        // revives it. The aborted search's late reply is still dropped by its searchId.
+        disposed = false;
         say('game-start');
         sound('game-start');
         void botTurn();

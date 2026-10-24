@@ -96,7 +96,14 @@ export function useRetry() {
     setState((s) => {
       if (!s || s.status === 'correct') return s;
       const uci = move.from + move.to + (move.promotion ?? '');
-      return { ...s, status: judgeRetry(s.move, uci) ? 'correct' : 'wrong' };
+      // Show the attempted move on the board; Try again puts the position back.
+      let fen = s.fen;
+      try {
+        fen = new Chess(s.move.fenBefore).move(move).after;
+      } catch {
+        // An illegal intent cannot reach here from the board; keep the position.
+      }
+      return { ...s, fen, status: judgeRetry(s.move, uci) ? 'correct' : 'wrong' };
     });
   }, []);
 

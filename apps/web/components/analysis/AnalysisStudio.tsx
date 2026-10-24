@@ -193,7 +193,12 @@ export function AnalysisStudio({
 
         <div className="max-h-72 overflow-y-auto rounded-(--radius-panel) border border-border bg-surface p-2">
           {line.sans.length > 0 ? (
-            <MoveList sans={line.sans} currentPly={ply} onSelectPly={setPly} />
+            <MoveList
+              sans={line.sans}
+              currentPly={ply}
+              onSelectPly={setPly}
+              startFen={line.startFen}
+            />
           ) : (
             <p className="p-2 text-sm text-text-muted">
               Make a move on the board, or import a game.
