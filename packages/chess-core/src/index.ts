@@ -18,6 +18,7 @@ export {
   see,
 } from './board/material';
 export { DEFAULT_GLICKO2, GLICKO2_MAX_RD, updateGlicko2 } from './rating/glicko2';
+export { CLASSIFY, classifyMove, type ClassifyInput } from './game-review/classify';
 export {
   estimateRating,
   expectedAccuracy,
