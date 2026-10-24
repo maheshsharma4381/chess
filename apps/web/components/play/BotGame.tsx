@@ -1,6 +1,7 @@
 'use client';
 
 import { FlipVertical2, Flag, Lightbulb, RotateCcw, Undo2, Volume2, VolumeX } from 'lucide-react';
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { botById } from '@chess/bots';
@@ -216,14 +217,12 @@ export function BotGame({ botId, mode, color, engine }: BotGameProps) {
               >
                 <RotateCcw aria-hidden className="size-4" /> New game
               </button>
-              <button
-                type="button"
-                disabled
-                title="Game Review is coming in the next update"
-                className="min-h-11 rounded-(--radius-control) border border-border px-4 text-text-muted"
+              <Link
+                href={`/review?pgn=${encodeURIComponent(s.toPgn())}`}
+                className="inline-flex min-h-11 items-center rounded-(--radius-control) border border-border px-4 font-medium hover:bg-surface"
               >
-                Review (soon)
-              </button>
+                Game Review
+              </Link>
             </div>
           </div>
         )}

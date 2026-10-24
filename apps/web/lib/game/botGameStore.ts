@@ -74,6 +74,8 @@ export interface BotGameState {
   setLang(lang: CoachLanguage): void;
   /** Stops all engine work for this game (unmount, New game). */
   dispose(): void;
+  /** The game as PGN with players and result, for Game Review. */
+  toPgn(): string;
 }
 
 export interface BotGameDeps {
@@ -338,6 +340,20 @@ export function createBotGame(deps: BotGameDeps): StoreApi<BotGameState> {
         disposed = true;
         cancelSearch();
         set({ thinking: false });
+      },
+
+      toPgn() {
+        const s = get();
+        const you = 'You';
+        game.setHeader('Event', `Casual game vs ${s.bot.name}`);
+        game.setHeader('White', s.userColor === 'w' ? you : s.bot.name);
+        game.setHeader('Black', s.userColor === 'b' ? you : s.bot.name);
+        const result = s.result;
+        game.setHeader(
+          'Result',
+          !result ? '*' : result.winner === 'w' ? '1-0' : result.winner === 'b' ? '0-1' : '1/2-1/2',
+        );
+        return game.pgn();
       },
     };
   });
