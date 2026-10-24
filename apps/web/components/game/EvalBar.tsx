@@ -20,7 +20,9 @@ export function EvalBar({ score, orientation }: { score: Score | null; orientati
       aria-valuemax={100}
       aria-valuenow={Math.round(whitePct)}
       aria-valuetext={`${readout} (${whiteLeads ? 'White' : 'Black'} is better)`}
-      className="relative h-full w-6 overflow-hidden rounded-[4px] bg-[#403d39]"
+      // self-stretch, not h-full: the parent's height comes from the board, so a % height
+      // would resolve to 0 (found by the e2e test; jsdom does no layout).
+      className="relative min-h-40 w-6 shrink-0 self-stretch overflow-hidden rounded-[4px] bg-[#403d39]"
     >
       <div
         data-testid="eval-fill"

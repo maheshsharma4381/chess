@@ -11,3 +11,5 @@ dist/
 .DS_Store
 apps/web/public/engine/
 *.tsbuildinfo
+test-results/
+playwright-report/

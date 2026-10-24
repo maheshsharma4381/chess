@@ -114,6 +114,25 @@ describe('<InteractiveBoard>', () => {
     expect(arrow).toHaveAttribute('data-color', 'red');
   });
 
+  it('moves by drag and drop, and the next click still works', async () => {
+    const onMove = vi.fn();
+    render(<InteractiveBoard fen={START} movable="w" onMove={onMove} />);
+    const grid = screen.getByRole('grid');
+    grid.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 800, height: 800, right: 800, bottom: 800 }) as DOMRect;
+    // g1 = column 6, row 7 -> (650, 750); f3 = column 5, row 5 -> (550, 550)
+    fireEvent.pointerDown(grid, { button: 0, clientX: 650, clientY: 750, pointerId: 7 });
+    fireEvent.pointerMove(grid, { button: 0, clientX: 600, clientY: 650, pointerId: 7 });
+    fireEvent.pointerUp(grid, { button: 0, clientX: 550, clientY: 550, pointerId: 7 });
+    expect(onMove).toHaveBeenCalledWith({ from: 'g1', to: 'f3', premove: false });
+
+    // Browsers send no click after a drag that ends on another square, so nothing may
+    // stay "suppressed": the user's next click must select normally.
+    await new Promise((r) => setTimeout(r, 10));
+    fireEvent.click(square('e2'));
+    expect(square('e2')).toHaveAttribute('data-selected', 'true');
+  });
+
   it('slides pieces with the fast motion token (zeroed for reduced motion)', () => {
     render(<InteractiveBoard fen={START} movable="w" onMove={vi.fn()} />);
     const piece = screen.getByTestId('piece-e1');

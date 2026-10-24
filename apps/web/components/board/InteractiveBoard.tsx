@@ -162,7 +162,12 @@ export function InteractiveBoard({
       return;
     }
     if (drag?.active) {
+      // Swallow only a click fired by this same drop (same task); browsers often send none
+      // when the drop square differs, and a sticky flag would eat the user's next click.
       suppressClick.current = true;
+      setTimeout(() => {
+        suppressClick.current = false;
+      }, 0);
       if (square && square !== drag.from)
         dispatch({ type: 'moveAttempt', from: drag.from, to: square });
     }

@@ -12,7 +12,8 @@
     "start": "next start",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
-    "test": "vitest run --testTimeout=20000"
+    "test": "vitest run --testTimeout=20000",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@chess/bots": "workspace:*",
@@ -29,6 +30,7 @@
     "zustand": "5.0.16"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@tailwindcss/postcss": "4.3.3",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
