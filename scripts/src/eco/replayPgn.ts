@@ -6,6 +6,8 @@ export interface ReplayedLine {
   sans: string[];
   plies: number;
   epd: string;
+  /** EPD after each ply; the last element equals `epd`. */
+  prefixEpds: string[];
 }
 
 const MOVE_NUMBER = /^\d+\.+/;
@@ -16,6 +18,7 @@ export function replayPgn(pgn: string): ReplayedLine {
   const chess = new Chess();
   const uci: string[] = [];
   const sans: string[] = [];
+  const prefixEpds: string[] = [];
 
   for (const token of pgn.trim().split(/\s+/)) {
     const san = token.replace(MOVE_NUMBER, '');
@@ -29,7 +32,14 @@ export function replayPgn(pgn: string): ReplayedLine {
     }
     uci.push(move.from + move.to + (move.promotion ?? ''));
     sans.push(move.san);
+    prefixEpds.push(normalizeEpd(chess.fen()));
   }
 
-  return { uci: uci.join(' '), sans, plies: sans.length, epd: normalizeEpd(chess.fen()) };
+  return {
+    uci: uci.join(' '),
+    sans,
+    plies: sans.length,
+    epd: prefixEpds.at(-1) ?? normalizeEpd(chess.fen()),
+    prefixEpds,
+  };
 }

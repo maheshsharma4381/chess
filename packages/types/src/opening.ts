@@ -10,6 +10,32 @@ export interface OpeningEntry {
   uci: string;
 }
 
+/** The deepest named book opening reached in a game. */
+export interface BookOpening {
+  eco: EcoCode;
+  name: string;
+  pgn: string;
+  /** Last ply (1-based) whose position is in book, named or interior. */
+  lastBookPly: number;
+}
+
+export interface OpeningTrack {
+  opening: BookOpening | null;
+  /** Whether the latest ply is still a book move. */
+  isBookMove: boolean;
+  /** First ply (1-based) that left book, or null if the game never left it. */
+  deviationPly: number | null;
+  /** bookPlies[i] is true when ply i + 1 is a book move. */
+  bookPlies: boolean[];
+}
+
+export interface BookMove {
+  uci: string;
+  san: string;
+  /** Named entry for the resulting position, or null for an interior book position. */
+  opening: OpeningEntry | null;
+}
+
 export type WhiteFirstMove = '1.e4' | '1.d4' | '1.c4' | '1.Nf3' | 'Flank';
 
 export interface OpeningFamily {
@@ -33,5 +59,10 @@ export interface EcoBook {
   byEpd: Record<string, OpeningEntry>;
   /** ECO code -> EPD keys into byEpd. */
   byEco: Record<EcoCode, string[]>;
+  /**
+   * Unnamed positions that lie on a book line (e.g. after 4.Nxd4 in the Open Sicilian).
+   * They are theory, so they count as book moves, but they carry no name of their own.
+   */
+  interior: string[];
   families: OpeningFamily[];
 }

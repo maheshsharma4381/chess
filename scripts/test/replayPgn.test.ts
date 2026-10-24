@@ -13,6 +13,13 @@ describe('replayPgn', () => {
     );
   });
 
+  it('lists the EPD after every ply, ending with the final position', () => {
+    const result = replayPgn('1. e4 c5 2. Nf3');
+    expect(result.prefixEpds).toHaveLength(3);
+    expect(result.prefixEpds[0]).toBe(replayPgn('1. e4').epd);
+    expect(result.prefixEpds.at(-1)).toBe(result.epd);
+  });
+
   it('accepts compact move numbers like "1.e4"', () => {
     expect(replayPgn('1.e4 e5 2.Nf3').uci).toBe('e2e4 e7e5 g1f3');
   });

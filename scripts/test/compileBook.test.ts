@@ -63,6 +63,22 @@ describe('compileBook', () => {
     ]);
   });
 
+  it('records unnamed positions along book lines as interior book positions', () => {
+    const { book } = compileBook(
+      [
+        { eco: 'B20', name: 'Sicilian Defense', pgn: '1. e4 c5' },
+        {
+          eco: 'B27',
+          name: 'Sicilian Defense: Hyperaccelerated Dragon',
+          pgn: '1. e4 c5 2. Nf3 g6',
+        },
+        { eco: 'B27', name: 'Sicilian Defense: Other', pgn: '1. e4 c5 2. Nf3 a6' },
+      ],
+      { source: 'lichess', generatedAt: 'x' },
+    );
+    expect(book.interior).toEqual([replayPgn('1. e4').epd, replayPgn('1. e4 c5 2. Nf3').epd]);
+  });
+
   const familyFirstMove = (family: RawOpening[]) =>
     compileBook(family, { source: 'lichess', generatedAt: 'x' }).book.families[0]?.firstMove;
 

@@ -45,6 +45,7 @@ export function compileBook(rows: RawOpening[], options: CompileOptions): Compil
   const byEco: EcoBook['byEco'] = {};
   const families = new Map<string, FamilyAccumulator>();
   const skipped: string[] = [];
+  const prefixCandidates = new Set<string>();
   let duplicates = 0;
 
   for (const row of rows) {
@@ -55,6 +56,8 @@ export function compileBook(rows: RawOpening[], options: CompileOptions): Compil
       skipped.push(`${row.eco} ${row.name}: ${(err as Error).message}`);
       continue;
     }
+
+    for (const epd of line.prefixEpds.slice(0, -1)) prefixCandidates.add(epd);
 
     if (byEpd[line.epd]) {
       duplicates++;
@@ -96,6 +99,8 @@ export function compileBook(rows: RawOpening[], options: CompileOptions): Compil
       count,
       byEpd,
       byEco,
+      // Filtered after all rows: a prefix may be named by a later row.
+      interior: [...prefixCandidates].filter((epd) => !byEpd[epd]),
       families: familyList,
     },
     skipped,
