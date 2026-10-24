@@ -1,3 +1,4 @@
+import { Chess } from 'chess.js';
 import { describe, expect, it } from 'vitest';
 import type { Motif, MotifType } from '@chess/types';
 import { detectMotifs, type MotifInput } from '../src/index';
@@ -187,5 +188,64 @@ describe('positional factors', () => {
     expect(
       detectMotifs(input({ fenBefore: '4k3/8/8/8/8/8/P7/4K3 w - - 0 1', uci: 'a2a3', ply: 60 })),
     ).toEqual([]);
+  });
+});
+
+/** Real-game moves the Phase 1 review found producing false motifs. */
+describe('no false positives on ordinary moves', () => {
+  const fenAfter = (sans: string) => {
+    const chess = new Chess();
+    for (const san of sans.split(' ')) chess.move(san);
+    return chess.fen();
+  };
+
+  it('does not call 3.Bc4 a pin (the f7 pawn is not pinned to a knight)', () => {
+    const motifs = detectMotifs(
+      input({ fenBefore: fenAfter('e4 e5 Nf3 Nc6'), uci: 'f1c4', ply: 5 }),
+    );
+    expect(types(motifs)).not.toContain('pin');
+  });
+
+  it('reports neither pawn pins nor a hanging bishop for the trade 4.Bxc6', () => {
+    const motifs = detectMotifs(
+      input({ fenBefore: fenAfter('e4 e5 Nf3 Nc6 Bb5 a6'), uci: 'b5c6', ply: 7 }),
+    );
+    expect(types(motifs)).not.toContain('pin');
+    expect(types(motifs)).not.toContain('hanging-piece');
+  });
+
+  it('does not call a queen trade a hanging queen', () => {
+    const motifs = detectMotifs(
+      input({ fenBefore: '3qk3/8/8/8/8/8/8/3QK3 b - - 0 1', uci: 'd8d1' }),
+    );
+    expect(types(motifs)).not.toContain('hanging-piece');
+  });
+
+  it('does not report a fork by a piece that can simply be captured', () => {
+    const motifs = detectMotifs(
+      input({ fenBefore: 'r2qk3/8/8/1N6/8/8/8/4K3 w - - 0 1', uci: 'b5c7' }),
+    );
+    expect(types(motifs)).not.toContain('fork');
+  });
+
+  it('does not call the mating move a fork', () => {
+    const motifs = detectMotifs(
+      input({
+        fenBefore: '1n4k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1',
+        uci: 'd1d8',
+        scoreAfter: { mate: 1 },
+      }),
+    );
+    expect(types(motifs)).not.toContain('fork');
+  });
+
+  it('still reports a pin of a knight to the queen', () => {
+    const motifs = detectMotifs(
+      input({ fenBefore: '3q4/8/8/3n4/8/8/8/R3K2k w - - 0 1', uci: 'a1d1' }),
+    );
+    expect(find(motifs, 'pin')).toMatchObject({
+      squares: ['d1', 'd5', 'd8'],
+      detail: { piece: 'knight', behind: 'queen' },
+    });
   });
 });

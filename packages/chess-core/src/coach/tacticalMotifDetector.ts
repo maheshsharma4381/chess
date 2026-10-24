@@ -61,8 +61,14 @@ function play(chess: Chess, uci: string): Move | null {
   }
 }
 
-/** The moved piece attacks two or more worthwhile targets: the king, bigger pieces, or loose pieces. */
-function forkBy(board: Board, square: Square, source: Source): Motif | null {
+/**
+ * The piece that just moved to `square` attacks two or more worthwhile targets: the king,
+ * bigger pieces, or loose pieces. Not a fork if the forker can simply be won, or if the
+ * move is checkmate (`position` is the position after the move).
+ */
+function forkBy(position: Chess, square: Square, source: Source): Motif | null {
+  if (position.isCheckmate() || see(position.fen(), square) > 0) return null;
+  const board = position.board();
   const attacker = pieceAt(board, square);
   if (!attacker) return null;
   const targets = attacksFrom(board, square).filter((sq) => {
@@ -83,9 +89,15 @@ function forkBy(board: Board, square: Square, source: Source): Motif | null {
   };
 }
 
-function hangingPieces(fenAfter: string, board: Board, mover: ChessColor): Motif[] {
-  return piecesOf(board, mover)
-    .filter((p) => p.type !== 'p' && p.type !== 'k' && see(fenAfter, p.square) > 0)
+/**
+ * The mover's pieces the opponent can now win. A capturing piece only counts as hanging
+ * if the opponent wins more than it just took, so an even trade is not a hanging piece.
+ */
+function hangingPieces(fenAfter: string, board: Board, move: Move): Motif[] {
+  const tookBack = move.captured ? PIECE_VALUE[move.captured] : 0;
+  return piecesOf(board, move.color)
+    .filter((p) => p.type !== 'p' && p.type !== 'k')
+    .filter((p) => see(fenAfter, p.square) > (p.square === move.to ? tookBack : 0))
     .map((p) => ({
       type: 'hanging-piece' as const,
       squares: [p.square],
@@ -260,7 +272,7 @@ export function detectMotifs(input: MotifInput): Motif[] {
   }
 
   // Tactics created by the played move.
-  const playedFork = forkBy(after, move.to, 'played');
+  const playedFork = forkBy(chess, move.to, 'played');
   if (playedFork) motifs.push(playedFork);
   motifs.push(...discoveries(before, after, move));
   motifs.push(...newRayRelations(before, after, mover));
@@ -269,17 +281,17 @@ export function detectMotifs(input: MotifInput): Motif[] {
   if (!playedBest && input.bestLine[0]) {
     const alt = new Chess(input.fenBefore);
     const best = play(alt, input.bestLine[0]);
-    const fork = best && forkBy(alt.board(), best.to, 'best');
+    const fork = best && forkBy(alt, best.to, 'best');
     if (fork) motifs.push(fork);
   }
   if (input.replyLine[0]) {
     const reply = new Chess(fenAfter);
     const answer = play(reply, input.replyLine[0]);
-    const fork = answer && forkBy(reply.board(), answer.to, 'reply');
+    const fork = answer && forkBy(reply, answer.to, 'reply');
     if (fork) motifs.push(fork);
   }
 
-  motifs.push(...hangingPieces(fenAfter, after, mover));
+  motifs.push(...hangingPieces(fenAfter, after, move));
   if (input.sacrifice) motifs.push({ type: 'sacrifice', squares: [move.to], detail: {} });
 
   const opening = input.bookOpening;

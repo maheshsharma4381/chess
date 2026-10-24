@@ -101,6 +101,27 @@ describe('explainMove (English)', () => {
   });
 });
 
+describe('checkmating moves', () => {
+  const mate = review({
+    san: 'Qxf7#',
+    classification: 'best',
+    scoreBefore: { mate: 1 },
+    scoreAfter: { mate: 1 },
+    motifs: [{ type: 'mate-threat', squares: [], detail: { source: 'played', mateIn: 1 } }],
+  });
+
+  it('says checkmate instead of "forced mate in 1"', () => {
+    const out = explainMove(mate, 'en');
+    expect(out.text.startsWith('Checkmate!')).toBe(true);
+    expect(out.text).not.toMatch(/forced mate/i);
+    expect(out.evalChange).toBe('M1 → #');
+  });
+
+  it('says checkmate in Hinglish', () => {
+    expect(explainMove(mate, 'hinglish').text).toMatch(/^Checkmate kar diya!/);
+  });
+});
+
 describe('explainMove (Hinglish)', () => {
   it('explains the brilliant sacrifice in Hinglish', () => {
     const out = explainMove(

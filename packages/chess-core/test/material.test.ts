@@ -61,6 +61,11 @@ describe('isSacrifice', () => {
     expect(isSacrifice(fenAfter('d4 d5'), 'c2c4')).toBe(false);
   });
 
+  it('does not blame a move for material that was already lost (escaping a fork)', () => {
+    // Black is in a knight fork: whatever the king does, the rook on a8 falls.
+    expect(isSacrifice('r3k3/2N5/8/8/8/8/8/4K3 b - - 0 1', 'e8d8')).toBe(false);
+  });
+
   it('is false for an even trade', () => {
     expect(isSacrifice(fenAfter('e4 e5 Nf3 Nc6 Bb5 a6'), 'b5c6')).toBe(false);
   });

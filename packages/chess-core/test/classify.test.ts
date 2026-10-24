@@ -35,10 +35,17 @@ const losing = (winDiff: number, color: Color = 'white', extra: Partial<Classify
   );
 
 describe('classifyMove precedence', () => {
-  it('labels book moves Book regardless of evaluation', () => {
-    expect(classifyMove(base({ isBook: true, uci: 'a2a3', scoreAfter: { cp: -900 } }))).toBe(
-      'book',
+  it('labels sound book moves Book', () => {
+    expect(classifyMove(base({ isBook: true }))).toBe('book');
+    expect(losing(8, 'white', { isBook: true })).toBe('book');
+  });
+
+  it("does not let the book hide a Mistake or Blunder (traps like Fool's Mate are in the book)", () => {
+    const lines = [line('e2e4', { cp: 0 })];
+    expect(classifyMove(base({ isBook: true, uci: 'g2g4', lines, scoreAfter: { mate: -1 } }))).toBe(
+      'blunder',
     );
+    expect(losing(15, 'black', { isBook: true })).toBe('mistake');
   });
 
   it('labels an engine-best move Best', () => {
@@ -100,6 +107,11 @@ describe('Great', () => {
   it('rewards finding the only good move (gap >= 18 win%)', () => {
     const lines = [line('e2e4', { cp: 300 }), line('d2d4', { cp: -50 })];
     expect(classifyMove(base({ lines, scoreAfter: { cp: 300 } }))).toBe('great');
+  });
+
+  it('is not Great for a routine recapture, even when every other move loses material', () => {
+    const lines = [line('e2e4', { cp: 10 }), line('d2d4', { cp: -880 })];
+    expect(classifyMove(base({ lines, scoreAfter: { cp: 10 }, recapture: true }))).toBe('best');
   });
 
   it('is Best when the gap is 17', () => {

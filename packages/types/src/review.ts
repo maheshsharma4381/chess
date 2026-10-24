@@ -59,7 +59,8 @@ export interface ReviewReport {
   moves: MoveReview[];
   accuracy: Record<Color, number>;
   phaseAccuracy: Record<Color, PhaseAccuracy>;
-  estimatedRating: Record<Color, number>;
+  /** Null when a side made too few non-book moves for a meaningful estimate. */
+  estimatedRating: Record<Color, number | null>;
   counts: Record<Color, Record<MoveClassification, number>>;
   opening: BookOpening | null;
   /** White win% for every position, starting position first (length = plies + 1). */

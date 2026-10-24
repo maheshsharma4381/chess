@@ -108,9 +108,44 @@ describe('analyzeGame', () => {
     const total = (c: Record<string, number>) => Object.values(c).reduce((a, b) => a + b, 0);
     expect(total(report.counts.white) + total(report.counts.black)).toBe(7);
     expect(report.accuracy.white).toBeGreaterThan(report.accuracy.black);
-    expect(report.estimatedRating.white).toBeGreaterThan(0);
-    expect(report.estimatedRating.black).toBeGreaterThan(0);
     expect(report.phaseAccuracy.white.opening).not.toBeNull();
+  });
+
+  it('withholds the estimated rating when a side made too few non-book moves', async () => {
+    const report = await analyzeGame({ pgn: SCHOLARS }, { engine: scholarsEngine(), book });
+    expect(report.estimatedRating).toEqual({ white: null, black: null });
+  });
+
+  it('estimates a rating once each side has enough non-book moves', async () => {
+    const sans = Array.from({ length: 5 }, () => ['Ra2', 'Kd8', 'Ra1', 'Ke8']).flat();
+    const report = await analyzeGame(
+      { sans, startFen: '4k3/8/8/8/8/8/8/R3K3 w - - 0 1' },
+      { engine: new FakeEngine(), book },
+      { baseElo: { white: 1200 } },
+    );
+    expect(report.estimatedRating.white).toBeGreaterThan(1200);
+    expect(report.estimatedRating.black).not.toBeNull();
+  });
+
+  it("does not let book trap lines hide Fool's Mate", async () => {
+    const engine = new FakeEngine({
+      // Black to move after 2.g4: mate in 1 for Black (side-to-move POV).
+      [epdAfter('f3 e5 g4')]: [{ uci: 'd8h4', score: { mate: 1 } }],
+    });
+    const report = await analyzeGame({ pgn: '1. f3 e5 2. g4 Qh4#' }, { engine, book });
+    expect(report.moves[2]).toMatchObject({ san: 'g4', classification: 'blunder' });
+    // Spec formula for a 50 -> 0 win% drop: 103.1668 * e^(-0.04354 * 50) - 3.1669.
+    expect(report.moves[2]?.accuracy).toBeCloseTo(8.53, 1);
+    expect(report.accuracy.white).toBeLessThan(report.accuracy.black);
+  });
+
+  it('yields to the event loop while reviewing, so UIs and servers stay responsive', async () => {
+    let timerFired = false;
+    setTimeout(() => {
+      timerFired = true;
+    }, 0);
+    await analyzeGame({ pgn: SCHOLARS }, { engine: scholarsEngine(), book });
+    expect(timerFired).toBe(true);
   });
 
   it('scores a stalemate as a draw without asking the engine', async () => {

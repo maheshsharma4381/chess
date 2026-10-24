@@ -46,6 +46,21 @@ export interface AnalyzeOptions {
 }
 
 const PV_SAN_LENGTH = 6;
+/** Below this many non-book moves a side gets no estimated rating (Scholar's mate isn't 3200). */
+export const MIN_MOVES_FOR_RATING = 8;
+
+/**
+ * Lets the browser render, React Native handle gestures, or a Node server serve sockets
+ * between plies; the per-move work is tens of milliseconds each. chess-core has no
+ * DOM/Node types, so setTimeout is looked up structurally.
+ */
+const yieldToEventLoop = () =>
+  new Promise<void>((resolve) => {
+    const timer = (globalThis as { setTimeout?: (cb: () => void, ms: number) => unknown })
+      .setTimeout;
+    if (timer) timer(resolve, 0);
+    else resolve();
+  });
 const RESULT = /^(1-0|0-1|1\/2-1\/2|\*)$/;
 
 /** Extracts the start FEN and mainline SAN moves (headers, comments, variations and NAGs removed). */
@@ -164,6 +179,7 @@ export async function analyzeGame(
   const reviews: MoveReview[] = [];
   let named: OpeningEntry | null = null;
   for (const [i, move] of moves.entries()) {
+    await yieldToEventLoop();
     const ply = i + 1;
     const color: Color = move.color === 'w' ? 'white' : 'black';
     const fenBefore = fens[i] as string;
@@ -185,6 +201,7 @@ export async function analyzeGame(
       scoreAfter,
       prevOpponentClass: reviews[i - 1]?.classification ?? null,
       sacrifice,
+      recapture: Boolean(move.captured && moves[i - 1]?.captured && moves[i - 1]?.to === move.to),
     });
 
     let deviation: { bestBookSan: string } | null = null;
@@ -205,7 +222,7 @@ export async function analyzeGame(
       fenBefore,
       fenAfter,
       classification,
-      accuracy: isBook ? 100 : moveAccuracy(winBefore, winAfter),
+      accuracy: classification === 'book' ? 100 : moveAccuracy(winBefore, winAfter),
       winBefore,
       winAfter,
       scoreBefore,
@@ -238,14 +255,17 @@ export async function analyzeGame(
   const accuracy = gameAccuracy(winGraph, accuracies, colors);
   const counts = { white: emptyCounts(), black: emptyCounts() };
   for (const r of reviews) counts[r.color][r.classification]++;
+  const enoughMoves = (color: Color) =>
+    reviews.filter((r) => r.color === color && r.classification !== 'book').length >=
+    MIN_MOVES_FOR_RATING;
 
   return {
     moves: reviews,
     accuracy,
     phaseAccuracy: phaseAccuracy(winGraph, accuracies, colors, phases),
     estimatedRating: {
-      white: estimateRating(accuracy.white, baseElo.white),
-      black: estimateRating(accuracy.black, baseElo.black),
+      white: enoughMoves('white') ? estimateRating(accuracy.white, baseElo.white) : null,
+      black: enoughMoves('black') ? estimateRating(accuracy.black, baseElo.black) : null,
     },
     counts,
     opening: track.opening,

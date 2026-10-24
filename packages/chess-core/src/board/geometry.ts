@@ -117,7 +117,9 @@ export interface RayRelation {
 
 /**
  * Pins and skewers by `color`'s sliders: two enemy pieces on one ray.
- * Pin: the back piece is the king or worth more. Skewer: the front piece is worth more.
+ * Pin (spec: "immobilized on a ray toward the King or Queen"): a knight, bishop, rook or
+ * queen in front of a more valuable king or queen; pawn fronts are too noisy to report.
+ * Skewer: the front piece is worth more than a minor-or-better piece behind it.
  */
 export function rayRelations(board: Board, color: ChessColor): RayRelation[] {
   const out: RayRelation[] = [];
@@ -135,7 +137,8 @@ export function rayRelations(board: Board, color: ChessColor): RayRelation[] {
       if (!front || !back) continue;
       const fv = TARGET_VALUE[front.type];
       const bv = TARGET_VALUE[back.type];
-      if (front.type !== 'k' && (back.type === 'k' || bv > fv)) {
+      const pinnable = front.type !== 'k' && front.type !== 'p';
+      if (pinnable && (back.type === 'k' || back.type === 'q') && bv > fv) {
         out.push({ kind: 'pin', attacker, front, back });
       } else if (fv > bv && bv >= PIECE_VALUE.n) {
         out.push({ kind: 'skewer', attacker, front, back });

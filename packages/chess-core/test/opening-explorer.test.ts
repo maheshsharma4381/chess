@@ -191,6 +191,17 @@ describe('OpeningExplorerService errors', () => {
     expect(err).toBeInstanceOf(ExplorerError);
   });
 
+  it.each([
+    ['a null move', { ...mastersFixture, moves: [null] }],
+    ['a move without game counts', { ...mastersFixture, moves: [{ uci: 'e7e5', san: 'e5' }] }],
+    ['non-numeric totals', { ...mastersFixture, white: 'x' }],
+    ['a null top game', { ...mastersFixture, topGames: [null] }],
+  ])('rejects a payload with %s instead of returning half-mapped data', async (_, body) => {
+    const err = await run(recordingFetch(body).fetchFn).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ExplorerError);
+    expect((err as ExplorerError).status).toBeNull();
+  });
+
   it('wraps network failures', async () => {
     const down: typeof fetch = async () => {
       throw new TypeError('fetch failed');

@@ -1,4 +1,4 @@
-import { Chess, type Move, type PieceSymbol, type Square } from 'chess.js';
+import { Chess, type Color, type PieceSymbol, type Square } from 'chess.js';
 
 export const PIECE_VALUE: Record<PieceSymbol, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 
@@ -26,40 +26,33 @@ export function majorsAndMinors(fen: string): number {
 }
 
 /**
- * The legal capture onto `square` by the least valuable attacker (promotions only to a
- * queen; en passant never applies because the target square is occupied). Only the
- * attacking pieces' moves are generated: full verbose move generation is ~13x slower.
- */
-function leastValuableCapture(chess: Chess, square: Square): Move | null {
-  if (!chess.get(square)) return null;
-  const attackers = chess
-    .attackers(square, chess.turn())
-    .map((from) => ({ from, piece: chess.get(from) }))
-    .sort((a, b) => PIECE_VALUE[a.piece?.type ?? 'k'] - PIECE_VALUE[b.piece?.type ?? 'k']);
-  for (const { from } of attackers) {
-    const capture = chess
-      .moves({ square: from, verbose: true })
-      .find((m) => m.to === square && (!m.promotion || m.promotion === 'q'));
-    if (capture) return capture;
-  }
-  return null;
-}
-
-/**
  * Net gain for the side to move from capturing on `square` with its least valuable
  * attacker, after which each side may stop recapturing. Null if no capture exists.
+ * Attackers are tried with move()/undo() in value order: illegal ones (pinned) throw,
+ * and no other moves are generated, which keeps this cheap enough to run every ply.
  */
 function forcedExchange(chess: Chess, square: Square): number | null {
-  const capture = leastValuableCapture(chess, square);
-  if (!capture) return null;
+  const target = chess.get(square);
+  if (!target) return null;
+  const promotes = square[1] === '8' || square[1] === '1';
+  const attackers = chess
+    .attackers(square, chess.turn())
+    .map((from) => ({ from, type: chess.get(from)?.type ?? 'k' }))
+    .sort((a, b) => PIECE_VALUE[a.type] - PIECE_VALUE[b.type]);
 
-  const gain =
-    PIECE_VALUE[capture.captured as PieceSymbol] +
-    (capture.promotion ? PIECE_VALUE[capture.promotion] - PIECE_VALUE.p : 0);
-  chess.move(capture);
-  const reply = forcedExchange(chess, square);
-  chess.undo();
-  return gain - Math.max(0, reply ?? 0);
+  for (const { from, type } of attackers) {
+    const promotion = type === 'p' && promotes ? 'q' : undefined;
+    try {
+      chess.move({ from, to: square, promotion });
+    } catch {
+      continue; // pinned or otherwise illegal; try the next attacker
+    }
+    const gain = PIECE_VALUE[target.type] + (promotion ? PIECE_VALUE.q - PIECE_VALUE.p : 0);
+    const reply = forcedExchange(chess, square);
+    chess.undo();
+    return gain - Math.max(0, reply ?? 0);
+  }
+  return null;
 }
 
 /** Static exchange evaluation of capturing on `square` for the side to move; 0 if no capture. */
@@ -67,10 +60,34 @@ export function see(fen: string, square: string): number {
   return forcedExchange(new Chess(fen), square as Square) ?? 0;
 }
 
+/** The side to move's best winning capture against `victim`'s pieces (kings excluded). */
+function bestCaptureAgainst(chess: Chess, victim: Color): number {
+  let best = 0;
+  for (const row of chess.board()) {
+    for (const sq of row) {
+      if (!sq || sq.color !== victim || sq.type === 'k') continue;
+      best = Math.max(best, forcedExchange(chess, sq.square) ?? 0);
+    }
+  }
+  return best;
+}
+
+/** What the opponent could already win before the move, as if the mover passed. */
+function alreadyEnPrise(fenBefore: string, mover: Color): number {
+  const fields = fenBefore.trim().split(/\s+/);
+  fields[1] = mover === 'w' ? 'b' : 'w';
+  fields[3] = '-';
+  try {
+    return bestCaptureAgainst(new Chess(fields.join(' ')), mover);
+  } catch {
+    return 0; // a "passed" position chess.js refuses to load
+  }
+}
+
 /**
  * True when the move gives up at least {@link SACRIFICE_THRESHOLD} pawns of material:
- * what it captures, minus the opponent's best static exchange against any of the
- * mover's pieces afterwards.
+ * what it captures, minus how much more the opponent can win afterwards than before.
+ * Material that was already lost (a fork, a pin) is not the move's sacrifice.
  */
 export function isSacrifice(fenBefore: string, uci: string): boolean {
   const chess = new Chess(fenBefore);
@@ -80,12 +97,6 @@ export function isSacrifice(fenBefore: string, uci: string): boolean {
   let gained = move.captured ? PIECE_VALUE[move.captured] : 0;
   if (move.promotion) gained += PIECE_VALUE[move.promotion] - PIECE_VALUE.p;
 
-  let opponentBest = 0;
-  for (const row of chess.board()) {
-    for (const sq of row) {
-      if (!sq || sq.color !== mover || sq.type === 'k') continue;
-      opponentBest = Math.max(opponentBest, forcedExchange(chess, sq.square) ?? 0);
-    }
-  }
-  return gained - opponentBest <= -SACRIFICE_THRESHOLD;
+  const exposed = bestCaptureAgainst(chess, mover) - alreadyEnPrise(fenBefore, mover);
+  return gained - Math.max(0, exposed) <= -SACRIFICE_THRESHOLD;
 }

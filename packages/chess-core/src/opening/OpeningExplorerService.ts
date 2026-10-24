@@ -68,9 +68,29 @@ export interface ExplorerServiceOptions {
 
 const pct = (n: number, total: number) => (total === 0 ? 0 : (n / total) * 100);
 
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+const isCount = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0;
+const hasCounts = (v: Record<string, unknown>) =>
+  isCount(v['white']) && isCount(v['draws']) && isCount(v['black']);
+
+function isRawMove(v: unknown): v is RawMove {
+  return (
+    isObject(v) && typeof v['uci'] === 'string' && typeof v['san'] === 'string' && hasCounts(v)
+  );
+}
+
+function isRawGame(v: unknown): v is RawGame {
+  const player = (p: unknown) =>
+    isObject(p) && typeof p['name'] === 'string' && typeof p['rating'] === 'number';
+  return isObject(v) && typeof v['id'] === 'string' && player(v['white']) && player(v['black']);
+}
+
+/** Validates the whole payload up front so a bad field can never yield half-mapped data. */
 function isRawExplorer(value: unknown): value is RawExplorer {
-  const v = value as RawExplorer | null;
-  return typeof v === 'object' && v !== null && Array.isArray(v.moves);
+  if (!isObject(value) || !hasCounts(value) || !Array.isArray(value['moves'])) return false;
+  if (!value['moves'].every(isRawMove)) return false;
+  const games = value['topGames'];
+  return games === undefined || (Array.isArray(games) && games.every(isRawGame));
 }
 
 export class OpeningExplorerService {
@@ -132,7 +152,7 @@ export class OpeningExplorerService {
       throw new ExplorerError('Opening explorer returned malformed JSON', null, { cause: err });
     }
     if (!isRawExplorer(body)) {
-      throw new ExplorerError('Opening explorer response has no moves list', null);
+      throw new ExplorerError('Opening explorer response has an unexpected shape', null);
     }
     return body;
   }

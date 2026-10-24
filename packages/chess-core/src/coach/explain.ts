@@ -62,6 +62,8 @@ const LEAD: Record<MoveClassification, Copy> = {
   blunder: { en: 'This is a blunder.', hinglish: 'Ye blunder hai.' },
 };
 
+const CHECKMATE: Copy = { en: 'Checkmate!', hinglish: 'Checkmate kar diya!' };
+
 const d = (m: Motif, key: string) => String(m.detail[key] ?? '');
 
 /** One sentence per motif, or null when the motif doesn't fit (e.g. a "good" pawn note on a bad move). */
@@ -222,9 +224,15 @@ export function explainMove(review: MoveReview, lang: CoachLanguage): CoachExpla
   const positive = POSITIVE.has(classification);
   const symbol = ANNOTATED.has(classification) ? CLASSIFICATION_META[classification].symbol : '';
 
-  const parts = [LEAD[classification][lang]];
+  // On the mating move itself, "forced mate in 1" / "sets up a back-rank mate" is wrong.
+  const isMate = review.san.endsWith('#');
+  const motifs = isMate
+    ? review.motifs.filter((m) => m.type !== 'mate-threat' && m.type !== 'back-rank')
+    : review.motifs;
+
+  const parts = [isMate ? CHECKMATE[lang] : LEAD[classification][lang]];
   const used: Motif[] = [];
-  for (const m of pickMotifs(review.motifs, positive)) {
+  for (const m of pickMotifs(motifs, positive)) {
     if (used.length >= MAX_MOTIF_SENTENCES) break;
     const s = sentence(m, lang, positive);
     if (s) {
@@ -240,7 +248,7 @@ export function explainMove(review: MoveReview, lang: CoachLanguage): CoachExpla
 
   return {
     headline: `${review.san}${symbol} ${HEADLINE[classification][lang]}`,
-    evalChange: `${formatScore(review.scoreBefore)} → ${formatScore(review.scoreAfter)}`,
+    evalChange: `${formatScore(review.scoreBefore)} → ${isMate ? '#' : formatScore(review.scoreAfter)}`,
     text: parts.join(' '),
     motifs: used.map((m) => m.type),
   };

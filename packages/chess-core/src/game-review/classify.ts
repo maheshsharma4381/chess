@@ -13,6 +13,8 @@ export interface ClassifyInput {
   prevOpponentClass: MoveClassification | null;
   /** From isSacrifice(fenBefore, uci). */
   sacrifice: boolean;
+  /** Captures on the square of the opponent's previous capture: forced, never "Great". */
+  recapture?: boolean;
 }
 
 /** Spec thresholds and plan rulings R1-R3, R9. */
@@ -52,15 +54,23 @@ function band(winDiff: number): MoveClassification {
   return 'blunder';
 }
 
+/** Engine verdicts that the opening book must not hide (the book contains trap lines). */
+const BOOK_CANNOT_EXCUSE = new Set<MoveClassification>(['mistake', 'blunder', 'miss']);
+
 /**
- * Precedence (plan R2): Book → Brilliant → Great → Best → allows mate / drops to lost
- * (Blunder) → Miss → win% bands. A missed forced mate that keeps a clearly winning
- * position is capped at Mistake (R9).
+ * Precedence (plan R2, amended): Book → Brilliant → Great → Best → allows mate / drops to
+ * lost (Blunder) → Miss → win% bands. A book move is Book unless the engine calls it a
+ * Mistake, Blunder or Miss (Fool's Mate is "book"). A missed forced mate that keeps a
+ * clearly winning position is capped at Mistake (R9).
  */
 export function classifyMove(input: ClassifyInput): MoveClassification {
-  const { color, lines, scoreAfter } = input;
-  if (input.isBook) return 'book';
+  const verdict = engineVerdict(input);
+  if (input.isBook && !BOOK_CANNOT_EXCUSE.has(verdict)) return 'book';
+  return verdict;
+}
 
+function engineVerdict(input: ClassifyInput): MoveClassification {
+  const { color, lines, scoreAfter } = input;
   const best = lines[0];
   const winAfter = moverWin(scoreAfter, color);
   const winBefore = best ? moverWin(best.score, color) : winAfter;
@@ -81,7 +91,7 @@ export function classifyMove(input: ClassifyInput): MoveClassification {
   }
 
   const second = lines[1];
-  if (isBest && !forced && second) {
+  if (isBest && !forced && second && !input.recapture) {
     if (moverWin(best.score, color) - moverWin(second.score, color) >= CLASSIFY.greatMinGap) {
       return 'great';
     }
