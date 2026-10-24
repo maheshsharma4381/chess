@@ -69,7 +69,7 @@ describe('sign up', () => {
     expect(access.attrs).toEqual(expect.arrayContaining(['httponly', 'path=/', 'samesite=lax']));
     const refresh = cookie(res, 'chess_refresh')!;
     expect(refresh.attrs).toEqual(
-      expect.arrayContaining(['httponly', 'path=/api/auth', 'samesite=lax']),
+      expect.arrayContaining(['httponly', 'path=/api/v1/auth', 'samesite=lax']),
     );
     expect(access.attrs).not.toContain('secure');
 

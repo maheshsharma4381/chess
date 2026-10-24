@@ -47,6 +47,12 @@ const schema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.url().optional(),
   STOCKFISH_PATH: z.string().optional(),
+  // The path browsers use to reach this API (the web app rewrites /api/v1/* to /api/*).
+  // Cookie paths must match it, or browsers never send the refresh cookie back.
+  PUBLIC_API_PREFIX: z
+    .string()
+    .regex(/^\/[A-Za-z0-9/_-]*$/, 'must start with /')
+    .default('/api/v1'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
@@ -61,6 +67,7 @@ export interface Config {
   lichessToken: string | undefined;
   google: { clientId: string; clientSecret: string; redirectUri: string } | null;
   stockfishPath: string | undefined;
+  publicApiPrefix: string;
   production: boolean;
   logLevel: z.infer<typeof schema>['LOG_LEVEL'];
 }
@@ -109,6 +116,7 @@ export function loadConfig(
           }
         : null,
     stockfishPath: c.STOCKFISH_PATH,
+    publicApiPrefix: c.PUBLIC_API_PREFIX.replace(/\/$/, ''),
     production: c.NODE_ENV === 'production',
     logLevel: c.LOG_LEVEL,
   };

@@ -7,7 +7,6 @@ import { ACCESS_TTL_SECONDS, signAccess, verifyAccess } from './tokens';
 
 export const ACCESS_COOKIE = 'chess_access';
 export const REFRESH_COOKIE = 'chess_refresh';
-const REFRESH_PATH = '/api/auth';
 
 export interface AuthUser {
   id: string;
@@ -51,7 +50,7 @@ export async function issueAuth(
   });
   res.cookie(REFRESH_COOKIE, issued.refreshToken, {
     ...cookieBase(config),
-    path: REFRESH_PATH,
+    path: `${config.publicApiPrefix}/auth`,
     maxAge: REFRESH_TTL_MS,
   });
   return {};
@@ -59,7 +58,10 @@ export async function issueAuth(
 
 export function clearAuth(res: Response, config: Config) {
   res.clearCookie(ACCESS_COOKIE, { ...cookieBase(config), path: '/' });
-  res.clearCookie(REFRESH_COOKIE, { ...cookieBase(config), path: REFRESH_PATH });
+  res.clearCookie(REFRESH_COOKIE, {
+    ...cookieBase(config),
+    path: `${config.publicApiPrefix}/auth`,
+  });
 }
 
 function bearer(req: Request): string | null {
