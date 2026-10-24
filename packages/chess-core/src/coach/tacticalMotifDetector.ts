@@ -1,4 +1,10 @@
-import { Chess, type Color as ChessColor, type Move, type Square } from 'chess.js';
+import {
+  Chess,
+  type Color as ChessColor,
+  type Move,
+  type PieceSymbol,
+  type Square,
+} from 'chess.js';
 import type { BookOpening, Motif, Score } from '@chess/types';
 import {
   PIECE_NAME,
@@ -43,6 +49,10 @@ const CENTER = new Set(['d4', 'e4', 'd5', 'e5']);
 
 const other = (c: ChessColor): ChessColor => (c === 'w' ? 'b' : 'w');
 
+/** ["king", "rook", "bishop"] -> "king, rook and bishop". */
+const joinNames = (names: string[]) =>
+  names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+
 function play(chess: Chess, uci: string): Move | null {
   try {
     return chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
@@ -65,10 +75,11 @@ function forkBy(board: Board, square: Square, source: Source): Motif | null {
     );
   });
   if (targets.length < 2) return null;
+  const names = targets.map((sq) => PIECE_NAME[(pieceAt(board, sq) as { type: PieceSymbol }).type]);
   return {
     type: 'fork',
     squares: [square, ...targets],
-    detail: { piece: PIECE_NAME[attacker.type], source },
+    detail: { piece: PIECE_NAME[attacker.type], targets: joinNames(names), source },
   };
 }
 

@@ -52,6 +52,7 @@ describe('forks', () => {
     expect(fork?.squares[0]).toBe('c7');
     expect([...(fork?.squares.slice(1) ?? [])].sort()).toEqual(['a8', 'e8']);
     expect(fork?.detail).toMatchObject({ piece: 'knight', source: 'played' });
+    expect(['king and rook', 'rook and king']).toContain(fork?.detail['targets']);
   });
 
   it('detects a fork the best line had and the played move missed', () => {
