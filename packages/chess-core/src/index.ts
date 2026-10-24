@@ -19,6 +19,13 @@ export {
 } from './board/material';
 export { DEFAULT_GLICKO2, GLICKO2_MAX_RD, updateGlicko2 } from './rating/glicko2';
 export { CLASSIFY, classifyMove, type ClassifyInput } from './game-review/classify';
+export {
+  analyzeGame,
+  parsePgn,
+  type AnalyzeOptions,
+  type EngineAdapter,
+  type GameInput,
+} from './game-review/pipeline';
 export { detectMotifs, type MotifInput } from './coach/tacticalMotifDetector';
 export { explainMove, formatScore } from './coach/explain';
 export {
