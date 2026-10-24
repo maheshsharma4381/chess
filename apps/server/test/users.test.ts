@@ -1,4 +1,4 @@
-import request from 'supertest';
+﻿import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp, cookie, type TestApp } from './helpers/app';
 import { startTestDb, type TestDb } from './helpers/db';
@@ -26,7 +26,7 @@ async function signedIn(username = 'alice', email = `${username}@example.com`) {
   return `chess_access=${cookie(res, 'chess_access')!.value}`;
 }
 
-const patch = (auth: string, body: unknown) =>
+const patch = (auth: string, body: object) =>
   request(t.app).patch('/api/me').set('Cookie', auth).send(body);
 
 describe('PATCH /api/me', () => {
