@@ -22,7 +22,8 @@ export function ReviewNav({
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (isTyping(e.target) || e.altKey || e.ctrlKey || e.metaKey) return;
+      // A focused board uses the arrows to move between squares (it calls preventDefault).
+      if (e.defaultPrevented || isTyping(e.target) || e.altKey || e.ctrlKey || e.metaKey) return;
       const next =
         e.key === 'ArrowLeft'
           ? ply - 1
