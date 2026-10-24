@@ -4,6 +4,7 @@ import { authMiddleware } from './auth/middleware';
 import { authRouter } from './auth/routes';
 import type { Config } from './config';
 import type { PrismaClient } from './db';
+import { gamesRouter } from './games/routes';
 import type { Logger } from './logger';
 import type { Redis } from './redis';
 import { usersRouter } from './users/routes';
@@ -23,5 +24,5 @@ export interface ServiceDeps {
 /** Every feature router, in mount order. */
 export function buildRouters(deps: ServiceDeps): Router[] {
   const auth = authMiddleware(deps);
-  return [authRouter(deps), googleRouter(deps), usersRouter(deps, auth)];
+  return [authRouter(deps), googleRouter(deps), usersRouter(deps, auth), gamesRouter(deps, auth)];
 }
