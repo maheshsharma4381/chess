@@ -3,16 +3,19 @@
 import { FlipVertical2, Lightbulb, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useStore } from 'zustand';
+import { useStore, type StoreApi } from 'zustand';
 import type { EngineAdapter } from '@chess/chess-core';
 import type { CoachLanguage } from '@chess/types';
 import { InteractiveBoard } from '@/components/board/InteractiveBoard';
 import { ExportMenu } from '@/components/export/ExportMenu';
 import { EvalBar } from '@/components/game/EvalBar';
 import { MoveList } from '@/components/game/MoveList';
+import { api as defaultApi, type Api } from '@/lib/api/client';
+import { sessionStore, type SessionState } from '@/lib/api/session';
 import { engineStore } from '@/lib/engine/browserEngine';
 import { previewFrames, useLinePreview, useRetry } from '@/lib/review/coachModes';
 import { DEEP_DEPTH, QUICK_DEPTH, createReviewStore } from '@/lib/review/reviewStore';
+import { useServerReview } from '@/lib/review/serverReview';
 import { CoachPanel } from './CoachPanel';
 import { EvalGraph } from './EvalGraph';
 import { ReviewBoard } from './ReviewBoard';
@@ -49,9 +52,20 @@ export interface GameReviewProps {
   depth?: number;
   /** Tests inject an engine; the app uses the shared browser Stockfish worker. */
   engine?: EngineAdapter;
+  /** Tests inject the accounts API, session and poll interval. */
+  api?: Api;
+  session?: StoreApi<SessionState>;
+  pollMs?: number;
 }
 
-export function GameReview({ pgn, depth = QUICK_DEPTH, engine }: GameReviewProps) {
+export function GameReview({
+  pgn,
+  depth = QUICK_DEPTH,
+  engine,
+  api = defaultApi,
+  session = sessionStore(),
+  pollMs,
+}: GameReviewProps) {
   const store = useMemo(
     () =>
       createReviewStore({
@@ -96,6 +110,20 @@ export function GameReview({ pgn, depth = QUICK_DEPTH, engine }: GameReviewProps
     [store, stopPreview, exitRetry],
   );
   // A new run (deeper, or again after a cancel) also leaves Show Moves / Retry first.
+  useEffect(() => {
+    if (session.getState().status === 'loading') void session.getState().load();
+  }, [session]);
+  // Signed-in players get deep reviews from the server (cached ones show at once).
+  const onServerReport = useCallback(
+    (report: Parameters<ReturnType<typeof store.getState>['adopt']>[1], reportDepth: number) => {
+      stopPreview();
+      exitRetry();
+      store.getState().adopt(pgn, report, reportDepth);
+    },
+    [store, pgn, stopPreview, exitRetry],
+  );
+  const server = useServerReview({ pgn, api, session, onReport: onServerReport, pollMs });
+
   const rerun = (runDepth: number) => {
     stopPreview();
     exitRetry();
@@ -173,6 +201,10 @@ export function GameReview({ pgn, depth = QUICK_DEPTH, engine }: GameReviewProps
   const move = ply > 0 ? (report.moves[ply - 1] ?? null) : null;
   const score = move?.scoreAfter ?? report.moves[0]?.scoreBefore ?? { cp: 0 };
   const r = retry.state;
+  const serverProgress = server.state.status === 'running' ? server.state.progress : null;
+  const serverPct = serverProgress?.total
+    ? Math.round((serverProgress.done / serverProgress.total) * 100)
+    : 0;
   const deepPct = s.progress.total ? Math.round((s.progress.done / s.progress.total) * 100) : 0;
 
   return (
@@ -212,6 +244,13 @@ export function GameReview({ pgn, depth = QUICK_DEPTH, engine }: GameReviewProps
 
       <aside className="flex flex-col gap-4">
         <ReviewSummary report={report} names={names} />
+        {s.status === 'done' && (
+          <p className="-mt-2 text-xs text-text-muted">
+            {s.source === 'server'
+              ? `Server review at depth ${s.depth}`
+              : `Reviewed in your browser at depth ${s.depth}`}
+          </p>
+        )}
 
         {r ? (
           <section
@@ -286,16 +325,52 @@ export function GameReview({ pgn, depth = QUICK_DEPTH, engine }: GameReviewProps
           >
             <FlipVertical2 aria-hidden className="size-4" /> Flip board
           </button>
-          {s.status === 'done' && s.depth < DEEP_DEPTH && (
+          {s.status === 'done' && s.depth < DEEP_DEPTH && server.state.status === 'idle' && (
             <button
               type="button"
-              onClick={() => rerun(DEEP_DEPTH)}
+              onClick={() => (server.signedIn ? void server.request() : rerun(DEEP_DEPTH))}
               className="min-h-11 cursor-pointer rounded-(--radius-control) border border-border bg-surface-raised px-3 text-sm hover:bg-border"
             >
               Deeper review (depth {DEEP_DEPTH})
             </button>
           )}
         </div>
+
+        {server.state.status === 'running' && (
+          <div className="flex items-center gap-3 text-sm">
+            <div
+              role="progressbar"
+              aria-label={`Server review at depth ${DEEP_DEPTH}`}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={serverPct}
+              className="h-2 flex-1 overflow-hidden rounded-full bg-surface-raised"
+            >
+              <div className="h-full bg-brand" style={{ width: `${serverPct}%` }} />
+            </div>
+            <span className="tabular text-text-muted">
+              {server.state.progress ? `Server review: ${serverPct}%` : 'Queued on the server…'}
+            </span>
+          </div>
+        )}
+        {server.state.status === 'failed' && (
+          <div
+            role="alert"
+            className="space-y-2 rounded-(--radius-control) border border-danger p-3 text-sm"
+          >
+            <p>{server.state.message}</p>
+            <button
+              type="button"
+              onClick={() => {
+                server.reset();
+                rerun(DEEP_DEPTH);
+              }}
+              className="min-h-11 cursor-pointer rounded-(--radius-control) border border-border bg-surface-raised px-3 hover:bg-border"
+            >
+              Review deeper in your browser
+            </button>
+          </div>
+        )}
 
         {s.status === 'running' && (
           <div className="flex items-center gap-3 text-sm">

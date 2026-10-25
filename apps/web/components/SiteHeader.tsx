@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { UserMenu } from './auth/UserMenu';
 
 const NAV = [
   { href: '/play/bots', label: 'Play' },
@@ -29,6 +30,7 @@ export function SiteHeader() {
             </li>
           ))}
         </ul>
+        <UserMenu />
       </nav>
     </header>
   );

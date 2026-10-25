@@ -73,6 +73,11 @@ export function authRouter(deps: ServiceDeps): Router {
   const router = Router();
   const ip = (req: { ip?: string }) => req.ip ?? 'unknown';
 
+  // Which sign-in methods the UI should offer.
+  router.get('/api/auth/providers', (_req, res) => {
+    res.json({ password: true, google: config.google !== null });
+  });
+
   router.post(
     '/api/auth/signup',
     rateLimit({ redis, prefix: redisPrefix, name: 'signup', key: ip, limit: 5, windowSec: 3600 }),

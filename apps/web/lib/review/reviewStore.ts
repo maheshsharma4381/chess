@@ -15,7 +15,11 @@ export interface ReviewState {
   /** Position shown: 0 = start, n = after ply n. */
   ply: number;
   depth: number;
+  /** Where the shown report was computed. */
+  source: 'browser' | 'server';
   run(pgn: string, opts?: { depth?: number }): Promise<void>;
+  /** Shows a report computed elsewhere (the server), stopping any browser run. */
+  adopt(pgn: string, report: ReviewReport, depth: number): void;
   cancel(): void;
   setPly(ply: number): void;
 }
@@ -49,6 +53,7 @@ export function createReviewStore(deps: ReviewDeps): StoreApi<ReviewState> {
       error: null,
       ply: 0,
       depth: QUICK_DEPTH,
+      source: 'browser',
 
       async run(pgn, opts = {}) {
         get().cancel();
@@ -82,12 +87,33 @@ export function createReviewStore(deps: ReviewDeps): StoreApi<ReviewState> {
           );
           if (id !== runId) return;
           shown = { pgn, depth };
-          set({ status: 'done', report, ply: Math.min(get().ply, report.moves.length) });
+          set({
+            status: 'done',
+            report,
+            source: 'browser',
+            ply: Math.min(get().ply, report.moves.length),
+          });
         } catch (err) {
           if (id !== runId) return;
           if ((err as Error).name === 'AbortError') settleCancelled();
           else set({ status: 'error', error: (err as Error).message });
         }
+      },
+
+      adopt(pgn, report, depth) {
+        // Abandon any browser run: its late result must not replace this report.
+        runId++;
+        controller?.abort();
+        controller = null;
+        shown = { pgn, depth };
+        set({
+          status: 'done',
+          report,
+          depth,
+          source: 'server',
+          error: null,
+          ply: Math.min(get().ply, report.moves.length),
+        });
       },
 
       cancel() {

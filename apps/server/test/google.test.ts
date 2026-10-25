@@ -187,6 +187,17 @@ describe('Google sign-in', () => {
     await t.close();
   });
 
+  it('lists the providers the UI should offer', async () => {
+    const on = app();
+    await request(on.app).get('/api/auth/providers').expect(200, { password: true, google: true });
+    await on.close();
+    const off = app(testConfig());
+    await request(off.app)
+      .get('/api/auth/providers')
+      .expect(200, { password: true, google: false });
+    await off.close();
+  });
+
   it('answers 404 when Google is not configured', async () => {
     const t = app(testConfig());
     await request(t.app)

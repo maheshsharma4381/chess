@@ -3,7 +3,7 @@
 import { FlipVertical2, Flag, Lightbulb, RotateCcw, Undo2, Volume2, VolumeX } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useStore } from 'zustand';
+import { useStore, type StoreApi } from 'zustand';
 import { botById } from '@chess/bots';
 import { InteractiveBoard } from '@/components/board/InteractiveBoard';
 import { CapturedPieces } from '@/components/game/CapturedPieces';
@@ -11,7 +11,10 @@ import { EvalBar } from '@/components/game/EvalBar';
 import { MoveList } from '@/components/game/MoveList';
 import { OpeningBanner, useOpening } from '@/components/game/OpeningBanner';
 import type { MoveIntent } from '@/lib/board/reducer';
+import { api as defaultApi, type Api } from '@/lib/api/client';
+import { sessionStore, type SessionState } from '@/lib/api/session';
 import { engineStore, type EngineStatus } from '@/lib/engine/browserEngine';
+import { newClientGameId, useAutoSave, type SaveGamePayload } from '@/lib/game/autoSave';
 import { sanToWords } from '@/lib/game/speech';
 import { createBotGame, type BotEngine, type BotMode, type Side } from '@/lib/game/botGameStore';
 import { SoundEngine } from '@/lib/sound/SoundEngine';
@@ -51,9 +54,19 @@ export interface BotGameProps {
   color: Side;
   /** Tests inject an engine; the app uses the shared browser Stockfish worker. */
   engine?: BotEngine;
+  /** Tests inject the accounts API and session; the app uses the shared ones. */
+  api?: Api;
+  session?: StoreApi<SessionState>;
 }
 
-export function BotGame({ botId, mode, color, engine }: BotGameProps) {
+export function BotGame({
+  botId,
+  mode,
+  color,
+  engine,
+  api = defaultApi,
+  session = sessionStore(),
+}: BotGameProps) {
   const [gameKey, setGameKey] = useState(0);
   const sounds = useRef<SoundEngine | null>(null);
   const [muted, setMuted] = useState(readMuted);
@@ -89,6 +102,23 @@ export function BotGame({ botId, mode, color, engine }: BotGameProps) {
   );
   const opening = useOpening(fenHistory);
   const onMove = useCallback((intent: MoveIntent) => store.getState().userMove(intent), [store]);
+
+  // One id per game: saving it again (a re-render, a retry) never makes a second copy.
+  const clientGameId = useMemo(() => newClientGameId(), [gameKey]);
+  const savePayload = useCallback((): SaveGamePayload => {
+    const g = store.getState();
+    const winner = g.result?.winner;
+    return {
+      pgn: g.toPgn(),
+      clientGameId,
+      botId,
+      userColor: g.userColor === 'w' ? 'white' : 'black',
+      termination: g.result?.reason ?? 'abandoned',
+      result: !g.result ? '*' : winner === 'w' ? '1-0' : winner === 'b' ? '0-1' : '1/2-1/2',
+    };
+  }, [store, clientGameId, botId]);
+  const saved = useAutoSave({ over: s.status === 'over', payload: savePayload, api, session });
+  const username = useStore(session, (st) => st.user?.username);
 
   const unlockAudio = () => {
     sounds.current ??= new SoundEngine();
@@ -224,6 +254,7 @@ export function BotGame({ botId, mode, color, engine }: BotGameProps) {
                 Game Review
               </Link>
             </div>
+            <SaveNotice state={saved} username={username} />
           </div>
         )}
 
@@ -278,6 +309,40 @@ export function BotGame({ botId, mode, color, engine }: BotGameProps) {
         </div>
       </aside>
     </div>
+  );
+}
+
+/** What happened to the finished game: saved, saving, or why not. */
+function SaveNotice({
+  state,
+  username,
+}: {
+  state: ReturnType<typeof useAutoSave>;
+  username: string | undefined;
+}) {
+  const link = 'font-medium text-brand underline-offset-2 hover:underline';
+  return (
+    <p className="mt-3 text-sm text-text-muted" aria-live="polite">
+      {state.status === 'saving' && 'Saving to your archive…'}
+      {state.status === 'saved' && username && (
+        <Link href={`/profile/${username}`} className={link}>
+          Saved to your archive
+        </Link>
+      )}
+      {state.status === 'signed-out' && (
+        <Link href="/login?next=/play/bots" className={link}>
+          Log in to save your games
+        </Link>
+      )}
+      {state.status === 'error' && (
+        <>
+          Could not save this game ({state.message}).{' '}
+          <button type="button" onClick={state.retry} className={`${link} cursor-pointer`}>
+            Retry save
+          </button>
+        </>
+      )}
+    </p>
   );
 }
 

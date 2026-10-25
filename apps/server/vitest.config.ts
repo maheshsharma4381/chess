@@ -5,9 +5,10 @@ export default defineConfig({
     environment: 'node',
     include: ['test/**/*.test.ts'],
     globalSetup: ['./test/helpers/globalSetup.ts'],
-    // PGlite and Redis are per file; a few files at once keeps memory in check.
-    maxWorkers: 2,
+    // Each file boots its own PGlite (a WASM Postgres); one at a time keeps memory in check on
+    // small machines, where two at once could stall past the hook timeout.
+    maxWorkers: 1,
     // PGlite boots a WASM Postgres per file (several seconds on a cold, busy machine).
-    hookTimeout: 120_000,
+    hookTimeout: 300_000,
   },
 });
