@@ -68,6 +68,9 @@ importers:
       '@chess/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@chess/explorer-proxy':
+        specifier: workspace:*
+        version: link:../../packages/explorer-proxy
       '@chess/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -165,6 +168,9 @@ importers:
       '@chess/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@chess/explorer-proxy':
+        specifier: workspace:*
+        version: link:../../packages/explorer-proxy
       '@chess/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -304,6 +310,25 @@ importers:
       chess.js:
         specifier: 'catalog:'
         version: 1.4.0
+      eslint:
+        specifier: 'catalog:'
+        version: 10.13.0(jiti@2.7.0)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.5(@types/node@26.6.5)(jsdom@30.1.3(@noble/hashes@1.8.0))(vite@8.3.5(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+
+  packages/explorer-proxy:
+    dependencies:
+      chess.js:
+        specifier: 'catalog:'
+        version: 1.4.0
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.5
       eslint:
         specifier: 'catalog:'
         version: 10.13.0(jiti@2.7.0)

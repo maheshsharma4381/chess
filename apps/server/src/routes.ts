@@ -5,6 +5,7 @@ import { authRouter } from './auth/routes';
 import type { Config } from './config';
 import type { PrismaClient } from './db';
 import { gamesRouter } from './games/routes';
+import { explorerRouter } from './explorer/routes';
 import type { Logger } from './logger';
 import type { Redis } from './redis';
 import { createReviewQueue, type ReviewJobData } from './reviews/queue';
@@ -24,6 +25,11 @@ export interface ServiceDeps {
   google?: GoogleDeps;
   /** The review job queue (created from redis when absent). */
   reviews?: { queue: Queue<ReviewJobData> };
+  /** Overrides the explorer's upstream fetch (tests). */
+  explorerFetch?: (
+    url: string,
+    init?: { headers?: Record<string, string>; signal?: AbortSignal },
+  ) => Promise<Response>;
 }
 
 /** Every feature router, in mount order. */
@@ -36,5 +42,6 @@ export function buildRouters(deps: ServiceDeps): Router[] {
     usersRouter(deps, auth),
     gamesRouter(deps, auth),
     reviewsRouter(deps, auth),
+    explorerRouter(deps),
   ];
 }

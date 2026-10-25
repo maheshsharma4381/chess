@@ -1,0 +1,5 @@
+{
+  "//": "Server-side only (Next route handlers and apps/server): Node types for fetch/Response.",
+  "extends": "../../tsconfig.node.json",
+  "include": ["src", "test"]
+}

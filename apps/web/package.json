@@ -19,6 +19,7 @@
     "@chess/bots": "workspace:*",
     "@chess/chess-core": "workspace:*",
     "@chess/engine": "workspace:*",
+    "@chess/explorer-proxy": "workspace:*",
     "@chess/types": "workspace:*",
     "chess.js": "catalog:",
     "gifenc": "1.0.3",
