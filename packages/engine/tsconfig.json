@@ -1,5 +1,5 @@
 {
   "extends": "../../tsconfig.lib.json",
   "include": ["src"],
-  "exclude": ["src/node.ts"]
+  "exclude": ["src/node.ts", "src/transports/process.ts"]
 }

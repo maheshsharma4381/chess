@@ -7,6 +7,9 @@ import type { PrismaClient } from './db';
 import { gamesRouter } from './games/routes';
 import type { Logger } from './logger';
 import type { Redis } from './redis';
+import { createReviewQueue, type ReviewJobData } from './reviews/queue';
+import { reviewsRouter } from './reviews/routes';
+import type { Queue } from 'bullmq';
 import { usersRouter } from './users/routes';
 
 export interface ServiceDeps {
@@ -19,10 +22,19 @@ export interface ServiceDeps {
   now: () => Date;
   /** Overrides Google's token endpoint and keys (tests). */
   google?: GoogleDeps;
+  /** The review job queue (created from redis when absent). */
+  reviews?: { queue: Queue<ReviewJobData> };
 }
 
 /** Every feature router, in mount order. */
 export function buildRouters(deps: ServiceDeps): Router[] {
   const auth = authMiddleware(deps);
-  return [authRouter(deps), googleRouter(deps), usersRouter(deps, auth), gamesRouter(deps, auth)];
+  deps.reviews ??= { queue: createReviewQueue(deps.redis, deps.redisPrefix) };
+  return [
+    authRouter(deps),
+    googleRouter(deps),
+    usersRouter(deps, auth),
+    gamesRouter(deps, auth),
+    reviewsRouter(deps, auth),
+  ];
 }

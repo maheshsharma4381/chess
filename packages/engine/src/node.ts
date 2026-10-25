@@ -32,3 +32,19 @@ export function createNodeStockfish(
     opts,
   );
 }
+
+export { createProcessTransport } from './transports/process';
+
+/**
+ * The command that runs the bundled WASM Stockfish as its own process (UCI on stdin/stdout),
+ * e.g. for a server worker that should be able to kill a stuck engine. The engine file is
+ * started directly: the package's cli.js would add a second wrapper process.
+ */
+export function stockfishProcessCommand(flavor: StockfishFlavor = 'lite-single'): {
+  command: string;
+  args: string[];
+} {
+  const findEngine = (require('stockfish') as { findEngine: (flavor: string) => string })
+    .findEngine;
+  return { command: process.execPath, args: [findEngine(flavor)] };
+}
